@@ -95,6 +95,23 @@ Include only the keys that differ from the defaults, plus `adopted`:
 `adopted` is what tells every other skill that a file belongs to someone else
 and must only ever be appended to.
 
+### Match the changelog's order and format
+
+Check both before writing the config, because getting either wrong puts entries
+somewhere nobody will look:
+
+- **Order.** Read the first and last dated entries. If the first is the most
+  recent, the file is newest-first and needs
+  `"changelog_order": "newest-first"` — otherwise every entry is filed under
+  the oldest heading at the bottom.
+- **Format.** Copy the shape already used. If entries are headed sections, set
+  a matching multi-line template, for example
+  `"changelog_entry": "## {date} - {id} {title}
+
+Recorded in `{path}`.
+"`.
+  If they are bullets, leave the default.
+
 A malformed config is ignored rather than fatal, so validate it after writing:
 
 ```

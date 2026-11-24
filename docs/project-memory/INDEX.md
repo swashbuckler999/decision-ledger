@@ -20,6 +20,7 @@ What was chosen, and why.
 | [ADR-0007](decisions/ADR-0007-mechanical-check-for-state-file-loss.md) | Mechanical check for state-file loss | accepted | 2026-11-24 |
 | [ADR-0008](decisions/ADR-0008-never-overwrite-a-file-we-did-not-write.md) | Never overwrite a file we did not write | accepted | 2026-11-24 |
 | [ADR-0009](decisions/ADR-0009-adopt-what-exists-own-only-the-briefing.md) | Adopt what exists, own only the briefing | accepted | 2026-11-24 |
+| [ADR-0010](decisions/ADR-0010-respect-the-changelogs-own-order-and-format.md) | Respect the changelog's own order and format | accepted | 2026-11-24 |
 
 
 ## Rejections

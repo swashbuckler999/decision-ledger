@@ -186,6 +186,71 @@ def append_line(path, line):
         fh.write(line.rstrip("\n") + "\n")
 
 
+DEFAULT_CHANGELOG_ENTRY = "- {date} **{id}** {title} - `{path}`"
+
+
+def _write_atomic(path, text):
+    """Replace a file's contents without ever leaving it truncated.
+
+    Writes a sibling temp file and renames over the target, so an interrupted
+    write cannot destroy an adopted changelog that may be the only copy of
+    years of work.
+    """
+    tmp = path.with_name(path.name + ".ledger-tmp")
+    tmp.write_text(text, encoding="utf-8", newline="\n")
+    os.replace(tmp, path)
+
+
+def changelog_entry(payload=None, **fields):
+    """Render one changelog entry using the project's own format."""
+    template = config(payload).get("changelog_entry") or DEFAULT_CHANGELOG_ENTRY
+    try:
+        return template.format(**fields)
+    except Exception:
+        return DEFAULT_CHANGELOG_ENTRY.format(**fields)
+
+
+def add_changelog_entry(text, payload=None):
+    """Add an entry to the changelog, respecting the project's ordering.
+
+    Oldest-first (the default) appends. Newest-first inserts above the most
+    recent existing entry, because appending to the bottom of a newest-first
+    file files the entry under the oldest heading -- actively wrong, not just
+    inconsistent.
+
+    Existing content is never reordered, reformatted or removed; the only
+    change is the inserted block.
+    """
+    path = path_for("changelog", payload)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    block = text.rstrip("\n") + "\n"
+
+    if not path.is_file():
+        _write_atomic(path, block)
+        return path
+
+    order = (config(payload).get("changelog_order") or "oldest-first").lower()
+    original = path.read_text(encoding="utf-8", errors="replace")
+
+    if order != "newest-first":
+        _write_atomic(path, original + ("" if original.endswith("\n") else "\n") + block)
+        return path
+
+    lines = original.splitlines(keepends=True)
+    cut = next((i for i, ln in enumerate(lines) if ln.startswith("## ")), None)
+    if cut is None:
+        # No entry headings yet: put it after any title and intro.
+        _write_atomic(path, original + ("" if original.endswith("\n") else "\n") + block)
+        return path
+
+    new = "".join(lines[:cut]) + block + "\n" + "".join(lines[cut:])
+    # Refuse to write if anything but the insertion changed.
+    if original not in new.replace(block + "\n", "", 1):
+        raise RuntimeError("changelog insertion would alter existing content")
+    _write_atomic(path, new)
+    return path
+
+
 def tail(path, n):
     try:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()

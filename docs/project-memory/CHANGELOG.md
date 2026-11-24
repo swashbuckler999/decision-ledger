@@ -24,3 +24,4 @@ carries the reasoning.
 - 2026-11-24 **CR-0002** Adapt to projects that already keep notes - `docs/project-memory/change-requests/CR-0002-adapt-to-projects-that-already-keep-notes.md`
 - 2026-11-24 **ADR-0009** Adopt what exists, own only the briefing - `docs/project-memory/decisions/ADR-0009-adopt-what-exists-own-only-the-briefing.md`
 - 2026-11-24 **REJ-0006** Migrate existing documents into ledger records - `docs/project-memory/rejections/REJ-0006-migrate-existing-docs-into-records.md`
+- 2026-11-24 **ADR-0010** Respect the changelog's own order and format - `docs/project-memory/decisions/ADR-0010-respect-the-changelogs-own-order-and-format.md`

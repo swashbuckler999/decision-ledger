@@ -392,6 +392,67 @@ def test_adopt_existing_project():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_newest_first_changelog_insertion():
+    """A newest-first changelog gets the entry at the top, not the bottom.
+
+    Appending to the bottom of a newest-first file files the new entry under
+    the oldest heading, which is wrong rather than merely untidy. Trade
+    Manager's changelog is 220 entries newest-first, which is what prompted it.
+    """
+    print("\nNewest-first changelog insertion")
+    d = Path(tempfile.mkdtemp(prefix="ledger-order-"))
+    try:
+        entries = [f"## 2026-11-{22 - (i % 20):02d} - Entry {i}\n\nProse {i}.\n"
+                   for i in range(220)]
+        original = ("# CHANGELOG\n\nIntro that must stay on top.\n\n"
+                    + "\n".join(entries))
+        (d / "CHANGELOG.md").write_text(original, encoding="utf-8")
+        (d / ".ledger.json").write_text(json.dumps({
+            "version": 1,
+            "paths": {
+                "changelog": "CHANGELOG.md",
+                "decisions": "docs/project-memory/decisions",
+                "briefing": "docs/project-memory/00-BRIEFING.md",
+            },
+            "adopted": ["changelog"],
+            "changelog_order": "newest-first",
+            "changelog_entry": "## {date} - {id} {title}\n\nRecorded in `{path}`.\n",
+        }, indent=2), encoding="utf-8")
+
+        env = dict(os.environ, LEDGER_PROJECT_DIR=str(d))
+        r = subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"),
+                            "adr", "Use Parquet"], capture_output=True,
+                           text=True, env=env, timeout=30)
+        check("creates the record", r.returncode == 0, r.stderr[:120])
+
+        new = (d / "CHANGELOG.md").read_text(encoding="utf-8")
+        headings = [ln for ln in new.splitlines() if ln.startswith("## ")]
+        check("intro stays on top",
+              new.startswith("# CHANGELOG\n\nIntro that must stay on top."))
+        check("entry lands above the newest, not at the bottom",
+              "ADR-0001" in headings[0], headings[0][:60])
+        check("uses the project's own entry format", headings[0].startswith("## 2026-"))
+        check("nothing else was lost", all(e.strip() in new for e in entries))
+        check("file grew", len(new) > len(original))
+        check("no temp file left behind", not list(d.glob("*.ledger-tmp")))
+
+        # Default ordering must still append.
+        (d / ".ledger.json").write_text(json.dumps({
+            "version": 1,
+            "paths": {"changelog": "CHANGELOG.md",
+                      "decisions": "docs/project-memory/decisions",
+                      "briefing": "docs/project-memory/00-BRIEFING.md"},
+        }, indent=2), encoding="utf-8")
+        subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"),
+                        "adr", "Second one"], capture_output=True, text=True,
+                       env=env, timeout=30)
+        tail_text = (d / "CHANGELOG.md").read_text(encoding="utf-8").splitlines()[-1]
+        check("oldest-first still appends to the bottom", "ADR-0002" in tail_text,
+              tail_text[:70])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_malformed_config_is_not_fatal():
     """A typo in .ledger.json must not break a session."""
     print("\nMalformed config")
@@ -449,7 +510,8 @@ def main():
               test_prompt_classifier, test_stop_gate,
               test_stop_gate_untracked_regression, test_orphan_detection,
               test_index_refuses_to_clobber, test_new_record_refuses_to_clobber,
-              test_adopt_existing_project, test_malformed_config_is_not_fatal,
+              test_adopt_existing_project, test_newest_first_changelog_insertion,
+              test_malformed_config_is_not_fatal,
               test_record_scaffolding):
         try:
             t()

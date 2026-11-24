@@ -152,9 +152,11 @@ def main():
         newline="\n",
     )
 
-    L.append_line(
-        L.path_for("changelog"),
-        f"- {L.today()} **{rid}** {title} - `{path.relative_to(L.project_dir())}`",
+    L.add_changelog_entry(
+        L.changelog_entry(
+            date=L.today(), id=rid, title=title,
+            path=path.relative_to(L.project_dir()).as_posix(),
+        )
     )
     print(path)
     return 0
