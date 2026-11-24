@@ -103,3 +103,28 @@ interpreter. Check with `which python` in the shell that actually runs hooks.
 
 Unverified: macOS and Linux, where `python` frequently does not exist at all
 and only `python3` does.
+
+---
+
+## OPEN BUG: the changelog write converts CRLF to LF
+
+Found 2026-11-24 by simulating adoption against a sandbox clone of a real
+369 KB changelog. The real project was never touched and is verified
+byte-identical; the bug is in the plugin.
+
+`_write_atomic` writes with `newline="
+"`. On Windows a CRLF changelog is
+therefore rewritten entirely in LF: the sandbox file went from 374,851 to
+369,502 bytes after adding 8 lines, a difference of 5,349 - one byte per line.
+
+`git diff` showed only "8 insertions" because git normalises line endings, so
+the damage is invisible in review and visible in the working tree. That is
+worse than a loud failure.
+
+It contradicts ADR-0008 and ADR-0010: the only change was supposed to be the
+inserted block. **Do not adopt a CRLF changelog until this is fixed.**
+
+Fix: read with `newline=""` to see the original endings, detect the dominant
+one, write the inserted block with it, and write the file back with
+`newline=""` so existing lines are preserved exactly. Needs a test with a CRLF
+fixture asserting the byte count grows by exactly the inserted block.
