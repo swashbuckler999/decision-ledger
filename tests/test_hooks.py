@@ -549,6 +549,42 @@ def test_scanner_detects_real_shapes():
         shutil.rmtree(d3, ignore_errors=True)
 
 
+def test_refuses_to_rewrite_non_utf8_changelog():
+    """A changelog that is not valid UTF-8 is left completely alone.
+
+    Reading with errors="replace" and writing the result back would swap
+    U+FFFD in for every undecodable byte and rewrite the whole file. On a
+    changelog that may be the only copy of years of work, that is silent
+    corruption, so the write is refused instead.
+    """
+    print("\nNon-UTF-8 changelog")
+    d = Path(tempfile.mkdtemp(prefix="ledger-enc-"))
+    try:
+        # cp1252 em dash and curly quote: invalid as UTF-8.
+        raw = b"# CHANGELOG\n\n## 2026-11-22 \x97 a thing \x93quoted\x94\n\nProse.\n"
+        (d / "CHANGELOG.md").write_bytes(raw)
+        (d / ".ledger.json").write_text(json.dumps({
+            "version": 1,
+            "paths": {"changelog": "CHANGELOG.md",
+                      "decisions": "docs/project-memory/decisions",
+                      "briefing": "docs/project-memory/00-BRIEFING.md"},
+            "adopted": ["changelog"],
+        }), encoding="utf-8")
+
+        env = dict(os.environ, LEDGER_PROJECT_DIR=str(d))
+        r = subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"),
+                            "adr", "Something"], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", env=env, timeout=30)
+        check("fails rather than corrupting", r.returncode != 0, f"rc={r.returncode}")
+        check("says why", "not valid UTF-8" in (r.stderr + r.stdout),
+              (r.stderr + r.stdout)[:150])
+        check("leaves the file byte-identical",
+              (d / "CHANGELOG.md").read_bytes() == raw)
+        check("leaves no temp file", not list(d.glob("*.ledger-tmp")))
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_malformed_config_is_not_fatal():
     """A typo in .ledger.json must not break a session."""
     print("\nMalformed config")
@@ -608,6 +644,7 @@ def main():
               test_index_refuses_to_clobber, test_new_record_refuses_to_clobber,
               test_adopt_existing_project, test_newest_first_changelog_insertion,
               test_scanner_detects_real_shapes,
+              test_refuses_to_rewrite_non_utf8_changelog,
               test_malformed_config_is_not_fatal,
               test_record_scaffolding):
         try:

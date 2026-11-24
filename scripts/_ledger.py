@@ -216,13 +216,14 @@ def changelog_entry(payload=None, **fields):
 def add_changelog_entry(text, payload=None):
     """Add an entry to the changelog, respecting the project's ordering.
 
-    Oldest-first (the default) appends. Newest-first inserts above the most
-    recent existing entry, because appending to the bottom of a newest-first
-    file files the entry under the oldest heading -- actively wrong, not just
-    inconsistent.
+    Newest-first (the default) inserts above the most recent existing entry.
+    Oldest-first appends. The distinction matters: appending to the bottom of
+    a newest-first file files the entry under the oldest heading, which is
+    actively wrong rather than merely inconsistent.
 
     Existing content is never reordered, reformatted or removed; the only
-    change is the inserted block.
+    change is the inserted block. A file that cannot be decoded as UTF-8 is
+    left completely alone -- see below.
     """
     path = path_for("changelog", payload)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -232,25 +233,40 @@ def add_changelog_entry(text, payload=None):
         _write_atomic(path, block)
         return path
 
+    # Strict decode. Reading with errors="replace" and writing the result back
+    # would substitute U+FFFD for every undecodable byte and rewrite the whole
+    # file -- silent corruption of something that may be the only copy. If it
+    # does not decode, refuse to touch it at all.
+    try:
+        original = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise RuntimeError(
+            f"{path} is not valid UTF-8 ({exc.reason} at byte {exc.start}); "
+            "refusing to rewrite it. Add the entry by hand, or convert the "
+            "file to UTF-8 first."
+        ) from None
+
     order = (config(payload).get("changelog_order") or DEFAULT_ORDER).lower()
-    original = path.read_text(encoding="utf-8", errors="replace")
+    tail_sep = "" if original.endswith("\n") else "\n"
 
     if order != "newest-first":
-        _write_atomic(path, original + ("" if original.endswith("\n") else "\n") + block)
+        _write_atomic(path, original + tail_sep + block)
         return path
 
     lines = original.splitlines(keepends=True)
     cut = next((i for i, ln in enumerate(lines) if ln.startswith("## ")), None)
     if cut is None:
-        # No entry headings yet: put it after any title and intro.
-        _write_atomic(path, original + ("" if original.endswith("\n") else "\n") + block)
+        # No entry headings yet: nothing to insert above, so append.
+        _write_atomic(path, original + tail_sep + block)
         return path
 
-    new = "".join(lines[:cut]) + block + "\n" + "".join(lines[cut:])
-    # Refuse to write if anything but the insertion changed.
-    if original not in new.replace(block + "\n", "", 1):
+    before, after = "".join(lines[:cut]), "".join(lines[cut:])
+    # Exact check: removing the inserted block must give back the original
+    # byte for byte. Anything else means the splice went wrong, and the file
+    # stays as it was.
+    if before + after != original:
         raise RuntimeError("changelog insertion would alter existing content")
-    _write_atomic(path, new)
+    _write_atomic(path, before + block + "\n" + after)
     return path
 
 
