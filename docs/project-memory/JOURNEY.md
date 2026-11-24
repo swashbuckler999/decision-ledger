@@ -69,3 +69,36 @@ The Stop and UserPromptSubmit hooks are the ones most likely to be wrong. Both
 are quiet by default and narrowly triggered, but whether they earn their place
 can only be judged after a real session. The plan is to cut them rather than
 endlessly tune them if they become wallpaper.
+
+## 2026-11-24 - Asked whether it was ready to publish
+
+The honest answer was no, and proving why took three failed attempts that
+were all my own test harness rather than the plugin.
+
+**Attempt 1: a real headless session.** `claude --plugin-dir ... -p "..."`
+never started: the environment resolved an unrecognised model and an invalid
+API key. Inconclusive, and not something to work around by touching the
+owner's API configuration.
+
+**Attempt 2: run the hook command strings through a shell.** All five
+"failed" because Python's `subprocess(shell=True)` uses `cmd.exe` on Windows,
+which does not expand `${VAR}`. Wrong shell, not a wrong plugin.
+
+**Attempt 3: force bash.** All five failed with `python: command not found`,
+which looked like a damning portability finding. It was not: bare `bash` on
+Windows resolves to WSL's bash, a Linux environment with no access to the
+Windows Python install.
+
+**Attempt 4, with Git Bash explicitly:** all five hooks exit 0, under both
+expansion models - harness-substituted and shell-expanded - with a plugin root
+containing a space, and the PostToolUse side effect written to disk.
+
+Worth keeping because the near-miss was instructive: three consecutive
+"failures" would each have justified a code change, and every one would have
+been a fix to a bug that did not exist. The discipline that saved it was
+asking why the test failed before editing anything.
+
+What is still not proven is the registration path itself. The command strings
+work; whether Claude Code loads `hooks/hooks.json` from an installed plugin
+and invokes them can only be observed from inside a live session. Until then
+the plugin is well-tested machinery that has never done its actual job.

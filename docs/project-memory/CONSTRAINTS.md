@@ -87,3 +87,19 @@ are not, and must not be added. Several are personal or client names.
 
 Re-running `python scripts/scan_project.py --survey <parent>` reproduces the
 data locally. Keep its output out of this repository.
+
+---
+
+## Hooks need a shell where `python` resolves
+
+Verified on Windows with Git Bash: all five hook commands run, with a plugin
+root containing a space, whether the harness substitutes `${CLAUDE_PLUGIN_ROOT}`
+or the shell expands it.
+
+They do **not** run under WSL bash, where the Windows Python install is not on
+PATH. Bare `bash` on Windows often resolves to WSL, so a hook failing with
+`python: command not found` usually means the wrong shell, not a missing
+interpreter. Check with `which python` in the shell that actually runs hooks.
+
+Unverified: macOS and Linux, where `python` frequently does not exist at all
+and only `python3` does.
