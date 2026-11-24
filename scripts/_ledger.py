@@ -198,10 +198,28 @@ def _write_atomic(path, text):
     Writes a sibling temp file and renames over the target, so an interrupted
     write cannot destroy an adopted changelog that may be the only copy of
     years of work.
+
+    `newline=""` disables translation: the bytes written are exactly the
+    string given. Writing with newline="\\n" rewrote every line ending of a
+    CRLF file, which git then hid behind its own normalisation.
     """
     tmp = path.with_name(path.name + ".ledger-tmp")
-    tmp.write_text(text, encoding="utf-8", newline="\n")
+    with tmp.open("w", encoding="utf-8", newline="") as fh:
+        fh.write(text)
     os.replace(tmp, path)
+
+
+def dominant_newline(text):
+    """The line ending a file actually uses, so an insert can match it."""
+    crlf = text.count("\r\n")
+    lf = text.count("\n") - crlf
+    return "\r\n" if crlf > lf else "\n"
+
+
+def _as_newline(text, newline):
+    """Re-express text with one consistent line ending."""
+    normalised = text.replace("\r\n", "\n").replace("\r", "\n")
+    return normalised if newline == "\n" else normalised.replace("\n", newline)
 
 
 def changelog_entry(payload=None, **fields):
@@ -233,12 +251,13 @@ def add_changelog_entry(text, payload=None):
         _write_atomic(path, block)
         return path
 
-    # Strict decode. Reading with errors="replace" and writing the result back
-    # would substitute U+FFFD for every undecodable byte and rewrite the whole
-    # file -- silent corruption of something that may be the only copy. If it
-    # does not decode, refuse to touch it at all.
+    # Strict decode, and no newline translation on the way in: reading with
+    # errors="replace" would substitute U+FFFD for undecodable bytes, and
+    # reading in text mode would hide whether the file is CRLF. Either way the
+    # write-back rewrites a file that may be the only copy.
     try:
-        original = path.read_text(encoding="utf-8")
+        with path.open("r", encoding="utf-8", newline="") as fh:
+            original = fh.read()
     except UnicodeDecodeError as exc:
         raise RuntimeError(
             f"{path} is not valid UTF-8 ({exc.reason} at byte {exc.start}); "
@@ -246,8 +265,12 @@ def add_changelog_entry(text, payload=None):
             "file to UTF-8 first."
         ) from None
 
+    # Match the file's own line endings. Writing LF into a CRLF file rewrites
+    # every line in it, and git's normalisation hides that in review.
+    eol = dominant_newline(original)
+    block = _as_newline(block, eol)
     order = (config(payload).get("changelog_order") or DEFAULT_ORDER).lower()
-    tail_sep = "" if original.endswith("\n") else "\n"
+    tail_sep = "" if original.endswith(("\n", "\r")) else eol
 
     if order != "newest-first":
         _write_atomic(path, original + tail_sep + block)
@@ -261,12 +284,12 @@ def add_changelog_entry(text, payload=None):
         return path
 
     before, after = "".join(lines[:cut]), "".join(lines[cut:])
-    # Exact check: removing the inserted block must give back the original
-    # byte for byte. Anything else means the splice went wrong, and the file
-    # stays as it was.
+    # Exact check: the two halves must rejoin into the original, character for
+    # character. Anything else means the splice went wrong and the file stays
+    # as it was.
     if before + after != original:
         raise RuntimeError("changelog insertion would alter existing content")
-    _write_atomic(path, before + block + "\n" + after)
+    _write_atomic(path, before + block + eol + after)
     return path
 
 

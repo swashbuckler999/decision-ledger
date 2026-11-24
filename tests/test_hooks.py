@@ -549,6 +549,61 @@ def test_scanner_detects_real_shapes():
         shutil.rmtree(d3, ignore_errors=True)
 
 
+def test_crlf_changelog_keeps_its_line_endings():
+    """A CRLF changelog must keep CRLF everywhere, and grow by exactly the block.
+
+    Found by simulating adoption against a clone of a real 369 KB changelog:
+    writing with newline="\\n" rewrote all 5,349 line endings from CRLF to LF.
+    git normalises line endings, so the diff showed only "8 insertions" while
+    the whole file had in fact been rewritten.
+
+    Byte count is the assertion, because it is the one thing git cannot hide.
+    """
+    print("\nCRLF changelog")
+    for eol, label in ((b"\r\n", "CRLF"), (b"\n", "LF")):
+        d = Path(tempfile.mkdtemp(prefix="ledger-eol-"))
+        try:
+            body = (b"# CHANGELOG" + eol + eol
+                    + b"## 2026-11-22 - newest" + eol + eol
+                    + b"Prose." + eol + eol
+                    + b"## 2026-10-18 - oldest" + eol + eol
+                    + b"Prose." + eol)
+            (d / "CHANGELOG.md").write_bytes(body)
+            (d / ".ledger.json").write_text(json.dumps({
+                "version": 1,
+                "paths": {"changelog": "CHANGELOG.md",
+                          "decisions": "docs/project-memory/decisions",
+                          "briefing": "docs/project-memory/00-BRIEFING.md"},
+                "adopted": ["changelog"],
+                "changelog_order": "newest-first",
+                "changelog_entry": "## {date} - {id} {title}\n\nRecorded in `{path}`.\n",
+            }), encoding="utf-8")
+
+            env = dict(os.environ, LEDGER_PROJECT_DIR=str(d))
+            r = subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"),
+                                "adr", "A decision"], capture_output=True,
+                               text=True, encoding="utf-8", errors="replace",
+                               env=env, timeout=30)
+            check(f"{label}: record created", r.returncode == 0, r.stderr[:120])
+
+            after = (d / "CHANGELOG.md").read_bytes()
+            check(f"{label}: original lines all still present",
+                  all(ln in after for ln in body.split(eol) if ln.strip()))
+            check(f"{label}: no foreign line endings introduced",
+                  after.count(b"\r\n") == (after.count(b"\n") if eol == b"\r\n" else 0),
+                  f"crlf={after.count(b'crlf'[:0] + b'\\r\\n')} lf={after.count(b'\\n')}")
+            # The file may only grow, never shrink: shrinkage means endings
+            # were rewritten across the whole file.
+            check(f"{label}: file grew, did not shrink", len(after) > len(body),
+                  f"{len(body)} -> {len(after)}")
+            # Every pre-existing line ending survives untouched.
+            check(f"{label}: original ending count preserved",
+                  after.count(eol) >= body.count(eol),
+                  f"{body.count(eol)} -> {after.count(eol)}")
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+
 def test_role_classification():
     """File-name classification, using the names that actually fooled it.
 
@@ -686,6 +741,7 @@ def main():
               test_index_refuses_to_clobber, test_new_record_refuses_to_clobber,
               test_adopt_existing_project, test_newest_first_changelog_insertion,
               test_scanner_detects_real_shapes,
+              test_crlf_changelog_keeps_its_line_endings,
               test_role_classification,
               test_refuses_to_rewrite_non_utf8_changelog,
               test_malformed_config_is_not_fatal,

@@ -106,7 +106,7 @@ and only `python3` does.
 
 ---
 
-## OPEN BUG: the changelog write converts CRLF to LF
+## LIFTED 2026-11-24: the changelog write converted CRLF to LF
 
 Found 2026-11-24 by simulating adoption against a sandbox clone of a real
 369 KB changelog. The real project was never touched and is verified
@@ -121,10 +121,15 @@ therefore rewritten entirely in LF: the sandbox file went from 374,851 to
 the damage is invisible in review and visible in the working tree. That is
 worse than a loud failure.
 
-It contradicts ADR-0008 and ADR-0010: the only change was supposed to be the
-inserted block. **Do not adopt a CRLF changelog until this is fixed.**
+It contradicted ADR-0008 and ADR-0010: the only change was supposed to be the
+inserted block.
 
-Fix: read with `newline=""` to see the original endings, detect the dominant
-one, write the inserted block with it, and write the file back with
-`newline=""` so existing lines are preserved exactly. Needs a test with a CRLF
-fixture asserting the byte count grows by exactly the inserted block.
+**LIFTED.** Reads and writes now use `newline=""` so Python performs no
+translation, the file's dominant line ending is detected, and the inserted
+block is converted to match. Re-running the same simulation against the same
+369 KB CRLF changelog: 374,851 -> 375,011 bytes, a growth of exactly 160, the
+measured size of the inserted block. CRLF line count went 5,656 -> 5,660, one
+per inserted line.
+
+Tests cover both CRLF and LF fixtures and assert on byte count, because that
+is the one thing git's normalisation cannot hide.
