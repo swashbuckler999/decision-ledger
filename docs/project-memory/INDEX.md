@@ -42,6 +42,7 @@ What was chosen, and why.
 | [ADR-0029](decisions/ADR-0029-trial-the-whole-flow-on-copies-of-real-projects.md) | Trial the whole flow on copies of real projects | accepted | 2026-11-25 |
 | [ADR-0030](decisions/ADR-0030-test-skill-selection-against-the-advertised-text.md) | Test skill selection against the advertised text | accepted | 2026-11-25 |
 | [ADR-0031](decisions/ADR-0031-anchor-every-script-path-the-instructions-give.md) | Anchor every script path the instructions give | accepted | 2026-11-25 |
+| [ADR-0032](decisions/ADR-0032-let-the-script-own-the-changelog-entry.md) | Let the script own the changelog entry | accepted | 2026-11-25 |
 
 
 ## Rejections

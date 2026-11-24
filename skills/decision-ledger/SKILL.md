@@ -138,12 +138,22 @@ are the highest-value content in the whole ledger and they vanish with the chat.
 
 ### 4. Update the master files
 
-Every record, without exception:
-
-- Append a dated line to `docs/project-memory/CHANGELOG.md` linking the ID
+- **`CHANGELOG.md` — `new_record.py` has already written the entry. Do not
+  write another.** The script appends the dated line as it creates the record,
+  in the project's own format and at the right end of the file. Read the
+  changelog before touching it: a live session following an earlier version of
+  this instruction produced a duplicate line and only avoided shipping it by
+  checking. Write the line by hand **only** if you created the record without
+  the script, which should be rare.
 - Append the narrative to `docs/project-memory/JOURNEY.md` if the record changes
   direction or abandons a route — the story, not the bullet
-- Update `docs/project-memory/00-PROJECT-STATE.md` so it still describes reality
+- Update `docs/project-memory/00-PROJECT-STATE.md` if the record changes what is
+  true now — the current status, what is in progress, the next step. It has no
+  rejections or decisions section to maintain: the "Settled rejections" and
+  "Accepted decisions" lists you see at the start of a session are composed by
+  the SessionStart hook from the record folders themselves, so there is nothing
+  to edit there and nothing to keep in sync. If nothing the briefing states has
+  changed, leave it alone.
 
 Separately from records: when you discover a **constraint** — an access rule, an
 environment limit, a thing that only works one particular way — append it to

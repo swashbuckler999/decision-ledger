@@ -47,6 +47,8 @@ Working skeleton, not yet exercised in anger.
   and `decision-ledger` ran end to end. It also found that every script path
   in every instruction was unreachable outside this checkout, plus three
   smaller defects, all now fixed
+- Second live session verified the path fix on all four routes, and found the
+  changelog being written twice — by the script and by the skill (ADR-0032)
 - The full write path trialled on copies of three real corpus projects, with
   the originals proved untouched (ADR-0029)
 - Skill *selection* simulated in a fresh context over three rounds; all five

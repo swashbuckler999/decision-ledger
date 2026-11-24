@@ -589,3 +589,37 @@ The four questions each found what the others could not: what situation, what
 environment, what file state, what happened earlier in the session. This adds
 a fifth, and it subsumes the rest: **what is true only here?** Every previous
 round ran inside the one directory where the plugin's own layout is correct.
+
+## 2026-11-25 — the verification run, which found three more
+
+A second live session, started only to confirm the ADR-0031 path fix, verified
+it on all four routes: the injected absolute paths were present and usable,
+`new_record.py` ran first try and allocated `REJ-0002` correctly after the
+existing `REJ-0001`, the record landed inside the project rather than wherever
+the shell happened to be, and the base-directory fallback reached
+`build_index.py` on its own. No guessing, no workarounds.
+
+Then it found three more things, because a verification run is another sample
+of the one environment that cannot be simulated here.
+
+The changelog was being written **twice**: the script appends the entry as it
+creates the record, and step 4 of the skill told the agent to append one "for
+every record, without exception". The session avoided shipping the duplicate
+only by reading the file first. Worse than the duplication, the hand-written
+line used the file's own style while the script used its default, so two
+formats ended up side by side — and the skill's own first rule is to match
+what is already there.
+
+The real cost is not tidiness. A model appending a line by hand **routes around
+everything ADR-0010, ADR-0011 and ADR-0023 built**: the project's own entry
+format, the newest-first insertion, the preserved line endings, the lock. One
+writer per file, and the script is it.
+
+Third, a literal reader was being sent to look for something that does not
+exist: step 4 said to keep `00-PROJECT-STATE.md` describing reality, but that
+file has no rejections or decisions section — the SessionStart hook composes
+those lists from the record folders. Nothing to edit, and an instruction
+implying otherwise invites someone to add the section to make it true.
+
+None of these are testable. They are instructions, which is exactly why two
+live sessions found them and 254 checks did not.
