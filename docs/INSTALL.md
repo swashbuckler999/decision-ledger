@@ -16,36 +16,47 @@ python --version
 
 ---
 
-## Option 1 — install from this local repository
+## Option 1 — install from GitHub
 
 Add the repository as a marketplace, then install the plugin from it.
 
 ```powershell
-claude plugin marketplace add "D:\Personal\Forex\[local corpus directory - path redacted]\Skill Development"
+claude plugin marketplace add swashbuckler999/decision-ledger
 ```
 
 ```powershell
 claude plugin install decision-ledger@sayan-skills --scope project
 ```
 
-`--scope project` installs it for the current project only. Use `--scope user`
-to install it for every project you work on; the hooks remain silent in any
-project that has no ledger directory, so this is safe.
+### Which scope to use
 
-## Option 2 — install from GitHub, once published
+| Scope | Lands in | Applies to |
+|---|---|---|
+| `--scope project` | the project's `.claude/settings.json` | that project; committed, so collaborators get it |
+| `--scope user` | `~/.claude` | every project you open, existing ones included |
+| `--scope local` | that project, that machine | you only, not committed |
+
+**Prefer `--scope project`.** The hooks stay silent in any project without a
+ledger directory, so a user-scope install will not create files where it is not
+wanted — but silence is not free. Each inert hook still starts a Python
+interpreter: roughly 106 ms on every prompt you submit and 129 ms at the end of
+every turn, in every project, whether or not it uses the ledger. Install it
+where you get the benefit.
+
+## Option 2 — install from a local clone
 
 ```powershell
-claude plugin marketplace add sayan-majumder/decision-ledger
+git clone https://github.com/swashbuckler999/decision-ledger.git
 ```
 
 ```powershell
-claude plugin install decision-ledger@sayan-skills --scope project
+claude plugin marketplace add .\decision-ledger
 ```
 
 ## Option 3 — try it for one session, without installing
 
 ```powershell
-claude --plugin-dir "D:\Personal\Forex\[local corpus directory - path redacted]\Skill Development"
+claude --plugin-dir .\decision-ledger
 ```
 
 Useful for judging whether the Stop and UserPromptSubmit hooks are too noisy

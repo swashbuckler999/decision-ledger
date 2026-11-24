@@ -84,12 +84,16 @@ that would make this the wrong call.
 ## Install
 
 ```powershell
-claude plugin marketplace add "D:\Personal\Forex\[local corpus directory - path redacted]\Skill Development"
+claude plugin marketplace add swashbuckler999/decision-ledger
 ```
 
 ```powershell
 claude plugin install decision-ledger@sayan-skills --scope project
 ```
+
+Use `--scope project`, not `--scope user`. The hooks are inert in any project
+without a ledger, but an inert hook still starts a Python interpreter — about
+235 ms per turn. Install it where you want it, not everywhere.
 
 Then, in the project you want tracked:
 
