@@ -1514,6 +1514,81 @@ def test_unborn_and_detached_head():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_activity_trail_does_not_silence_the_nag():
+    """The PostToolUse hook writes the activity trail on every edit, and the
+    trail is a ledger path. The Stop gate treated any dirty ledger path as
+    "something was recorded", so on the first edit in a freshly installed
+    project the hook created `activity/.gitignore`, git reported it untracked,
+    and the gate went quiet.
+
+    The first session of every new project -- the one where the habit is being
+    set -- therefore got no reminder at all. Found by replaying a session in
+    order; no single-hook test can reach it, because an earlier turn has to
+    create the condition.
+    """
+    print("\nThe activity trail is not a recording")
+    d = make_repo()
+    try:
+        (d / "README.md").write_text("# p\n", encoding="utf-8")
+        commit_all(d, "initial")
+        # Turn 1: an edit, which makes the PostToolUse hook create the trail.
+        (d / "feed.py").write_text("x = 1\n", encoding="utf-8")
+        run_hook("post_tool_use.py", {
+            "cwd": str(d), "hook_event_name": "PostToolUse", "tool_name": "Edit",
+            "tool_input": {"file_path": str(d / "feed.py")}})
+        gi = d / "docs" / "project-memory" / "activity" / ".gitignore"
+        check("the hook created the trail's .gitignore", gi.is_file())
+        # Turn 2: the session ends with code changed and nothing recorded.
+        out, _e, _c = run_hook("stop_gate.py", {"cwd": str(d),
+                                                "hook_event_name": "Stop"})
+        ctx = context_of(out)
+        check("the gate still warns", "decision ledger" in ctx,
+              ctx[:160] or "(silent)")
+        check("and names the changed file", "feed.py" in ctx, ctx[:160])
+        check("but does not name the activity trail", "activity" not in ctx,
+              ctx[:200])
+
+        sys.path.insert(0, str(SCRIPTS))
+        import _ledger as L
+        payload = {"cwd": str(d)}
+        trail = "docs/project-memory/activity/2026-01-01.md"
+        check("the trail is still a ledger path", L.is_ledger_path(trail, payload))
+        check("but is not a recording path",
+              not L.is_recording_path(trail, payload))
+        check("a decision record is a recording path",
+              L.is_recording_path("docs/project-memory/decisions/ADR-0001-x.md",
+                                   payload))
+        check("ordinary code is neither",
+              not L.is_ledger_path("feed.py", payload)
+              and not L.is_recording_path("feed.py", payload))
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_recording_a_decision_still_silences_the_nag():
+    """The mirror: writing an actual record must satisfy the gate, or the
+    reminder becomes unanswerable and people turn it off."""
+    print("\nA real record satisfies the gate")
+    d = make_repo()
+    try:
+        (d / "README.md").write_text("# p\n", encoding="utf-8")
+        commit_all(d, "initial")
+        (d / "feed.py").write_text("x = 1\n", encoding="utf-8")
+        out, _e, _c = run_hook("stop_gate.py", {"cwd": str(d),
+                                                "hook_event_name": "Stop"})
+        check("warns before anything is recorded",
+              "decision ledger" in context_of(out), context_of(out)[:120])
+        subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"), "adr",
+                        "Store ticks as Parquet"], capture_output=True, text=True,
+                       env=dict(os.environ, LEDGER_PROJECT_DIR=str(d)), timeout=30)
+        out, _e, _c = run_hook("stop_gate.py", {"cwd": str(d),
+                                                "hook_event_name": "Stop"})
+        check("quiet once the decision is recorded", not context_of(out).strip(),
+              context_of(out)[:160])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def main():
     print("decision-ledger hook tests")
     for t in (test_session_start, test_briefing_without_constraints_file,
@@ -1552,7 +1627,9 @@ def main():
               test_record_directory_that_is_a_file,
               test_failed_write_leaves_no_temp_file,
               test_hooks_survive_hostile_payloads,
-              test_unborn_and_detached_head):
+              test_unborn_and_detached_head,
+              test_activity_trail_does_not_silence_the_nag,
+              test_recording_a_decision_still_silences_the_nag):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test

@@ -51,3 +51,7 @@ carries the reasoning.
 - 2026-11-25 **ADR-0026** Install the plugin and drive it from the installed copy - `docs/project-memory/decisions/ADR-0026-install-the-plugin-and-drive-it-from-the-install.md`
 - 2026-11-25 Install trial: registration verified by the harness, hooks driven from the installed copy - see ADR-0026
 - 2026-11-25 Account-wide install made a first-class path in both install guides
+- 2026-11-25 **ADR-0027** Replay whole sessions, not single hooks - `docs/project-memory/decisions/ADR-0027-replay-whole-sessions-not-single-hooks.md`
+- 2026-11-25 **ADR-0028** The activity trail is not a recording - `docs/project-memory/decisions/ADR-0028-the-activity-trail-is-not-a-recording.md`
+- 2026-11-25 Added tests/simulate_session.py: a twelve-turn session replay, 23 checks, no model needed - see ADR-0027
+- 2026-11-25 Fixed: the activity trail silenced the unrecorded-change reminder in every new project - see ADR-0028

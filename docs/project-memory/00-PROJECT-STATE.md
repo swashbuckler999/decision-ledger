@@ -26,7 +26,8 @@ Working skeleton, not yet exercised in anger.
   `ledger-adopt`, `ledger-backfill` — done
 - Five hooks: SessionStart, PreCompact, PostToolUse, Stop, UserPromptSubmit — done
 - Record scaffolding and index generation scripts — done
-- Tests — 231 checks, dependency-free, `python tests/test_hooks.py`
+- Tests — 241 unit checks (`tests/test_hooks.py`) plus a 23-check
+  twelve-turn session replay (`tests/simulate_session.py`), no model needed
 - The three adoption situations (fresh / undocumented / documented) —
   simulated against sandbox copies, all three now handled
 - The three environments (worktree / no git / unusual config) — covered after

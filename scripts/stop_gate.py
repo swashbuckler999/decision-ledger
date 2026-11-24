@@ -151,7 +151,11 @@ def orphan_warning(cwd, payload):
 
 
 def unrecorded_warning(cwd, files, payload):
-    ledger_touched = [f for f in files if L.is_ledger_path(f, payload)]
+    # Three buckets, not two. The activity trail is a ledger path but not a
+    # recording, so it belongs in neither: counting it as code would nag about
+    # the plugin's own bookkeeping, and counting it as a recording silences the
+    # nag on the first edit of every new project. It is simply ignored.
+    ledger_touched = [f for f in files if L.is_recording_path(f, payload)]
     code_touched = [f for f in files if not L.is_ledger_path(f, payload)]
     if not code_touched or ledger_touched:
         return None

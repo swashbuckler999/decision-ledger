@@ -197,6 +197,32 @@ def is_ledger_path(rel_path, payload=None):
     return False
 
 
+def is_recording_path(rel_path, payload=None):
+    """True if this path is somewhere reasoning actually gets recorded.
+
+    Every recording path is a ledger path; the activity trail is the one that
+    is not. It is written by the PostToolUse hook on every file edit, so it is
+    evidence that something was *edited*, never that anything was *recorded*.
+
+    Conflating the two silenced the Stop gate exactly when it mattered. On the
+    first edit in a freshly installed project the hook creates
+    `activity/.gitignore`, git reports it as untracked, the gate saw "a ledger
+    file changed" and stayed quiet -- so the first session of every new
+    project, the one where the habit is being set, got no reminder at all.
+    Found by replaying a whole session in order; no single-hook test can see
+    it, because it takes an earlier turn to create the condition.
+    """
+    if not is_ledger_path(rel_path, payload):
+        return False
+    try:
+        activity = Path(path_for("activity", payload)).relative_to(
+            project_dir(payload)).as_posix()
+    except Exception:
+        activity = DEFAULTS["activity"]
+    rel = Path(rel_path).as_posix()
+    return not (rel == activity or rel.startswith(activity.rstrip("/") + "/"))
+
+
 _GIT_DIR_CACHE = {}
 
 

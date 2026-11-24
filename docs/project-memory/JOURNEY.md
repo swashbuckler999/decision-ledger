@@ -405,3 +405,51 @@ the README carries a second ready-to-paste prompt for account-wide, and the
 agent page gained the thing that actually surprises people: installing at user
 scope makes the plugin *available* everywhere and switches it on nowhere, and
 the agent must opt in only the current project and leave the others alone.
+
+## 2026-11-25 — a simulated session, and the hole it found immediately
+
+With a live model turn unavailable, the owner asked whether a simulated CLI
+test was possible. It was, and it mattered more than expected.
+
+Every test until now drove **one hook, once, against a state the test itself
+built**. A session is a state machine: what the Stop gate says depends on what
+PostToolUse did three turns earlier and on whether anything has been recorded
+since. Those transitions are unreachable one hook at a time, because the
+condition is created by an earlier turn.
+
+`tests/simulate_session.py` replays twelve turns of a plausible session. On
+its **first run** it found the Stop gate silent at the turn it exists for:
+code changed, nothing recorded, no warning — where 231 unit checks all said it
+fires.
+
+The cause was created by the turn before. The PostToolUse hook writes the
+activity trail on every edit, the trail is a ledger path, and the gate treated
+any dirty ledger path as "something was recorded". On the first edit in a fresh
+install the hook creates `activity/.gitignore`, git reports it untracked, and
+the gate goes quiet. So the reminder was suppressed in **the first session of
+every new project** — the session where the habit is being set — and recovered
+afterwards, which is exactly why nothing caught it.
+
+Underneath it was a conceptual conflation: `is_ledger_path` answers *does this
+belong to the ledger*, the gate needed *did a human record reasoning*, and one
+function was answering both. Split in ADR-0028; the trail is now ignored by the
+gate entirely, being neither code nor a recording.
+
+Confirmed the way these things should be: the same replay fails on the pre-fix
+build and passes on the fixed one, from an install-shaped copy as well as the
+source tree.
+
+### Four questions, four sets of defects
+
+The pattern is now explicit enough to state as method. Each question found
+things the others could not:
+
+1. **What situation is the project in?** — fresh, undocumented, documented
+2. **What environment is it running in?** — worktree, no git, odd config
+3. **What state are the files in?** — BOM, pipes, concurrency, unwritable
+4. **What happened earlier in this session?** — the one above
+
+And the unbroken pattern underneath all four: **every failure was silent.** The
+CRLF rewrite, the index overwriting a hand-written file, the changelog dropping
+an entry, and now a reminder that simply never arrives. All four reported
+success.
