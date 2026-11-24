@@ -60,5 +60,16 @@ session is worse than no memory aid.
 
 ## Diversions & Pivots
 
+### 2026-11-24 - SessionStart no longer fires on resume
+**Catalyst:** measuring the plugin's token cost on request. The briefing is
+~1,490 tokens and the matcher was `""`, which fires on every source including
+`resume` - where the conversation is already in context and the briefing is
+pure waste.
+**What changed:** matcher is now `startup|clear|compact|fork`.
+**What did not change:** the briefing still fires after compaction, which is the
+case it exists for.
+**Measured:** ~1,892 tokens resident per session, under 1% of a 200k context;
+~17 tokens per additional record.
+
 ## User's own words
 > n/a

@@ -15,3 +15,4 @@ carries the reasoning.
 - 2026-11-24 **CR-0001** Build for the Forex ML project first, publish later - `docs/project-memory/change-requests/CR-0001-build-for-forex-ml-publish-later.md`
 - 2026-11-24 Hook test suite added, 40 checks, all passing - `tests/test_hooks.py`
 - 2026-11-24 Fixed: Stop gate fired wrongly because git collapses untracked directories
+- 2026-11-24 SessionStart matcher narrowed to startup|clear|compact|fork, saving ~1,490 tokens per resume - see ADR-0003 Diversions
