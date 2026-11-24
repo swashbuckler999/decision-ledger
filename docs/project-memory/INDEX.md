@@ -19,6 +19,7 @@ What was chosen, and why.
 | [ADR-0006](decisions/ADR-0006-constraints-get-their-own-append-only-file.md) | Constraints get their own append-only file | accepted | 2026-11-24 |
 | [ADR-0007](decisions/ADR-0007-mechanical-check-for-state-file-loss.md) | Mechanical check for state-file loss | accepted | 2026-11-24 |
 | [ADR-0008](decisions/ADR-0008-never-overwrite-a-file-we-did-not-write.md) | Never overwrite a file we did not write | accepted | 2026-11-24 |
+| [ADR-0009](decisions/ADR-0009-adopt-what-exists-own-only-the-briefing.md) | Adopt what exists, own only the briefing | accepted | 2026-11-24 |
 
 
 ## Rejections
@@ -32,6 +33,7 @@ Settled arguments. **Read these before proposing anything new.**
 | [REJ-0003](rejections/REJ-0003-single-append-only-decisions-file.md) | Single append-only DECISIONS.md | rejected | 2026-11-24 |
 | [REJ-0004](rejections/REJ-0004-blocking-stop-hook-by-default.md) | Blocking Stop hook by default | rejected | 2026-11-24 |
 | [REJ-0005](rejections/REJ-0005-run-the-ledger-on-a-cheaper-model.md) | Run the ledger on a cheaper model, in a subagent | rejected | 2026-11-24 |
+| [REJ-0006](rejections/REJ-0006-migrate-existing-docs-into-records.md) | Migrate existing documents into ledger records | rejected | 2026-11-24 |
 
 
 ## Change requests
@@ -41,3 +43,4 @@ Scope changes and their impact.
 | ID | Title | Status | Date |
 |---|---|---|---|
 | [CR-0001](change-requests/CR-0001-build-for-forex-ml-publish-later.md) | Build for the Forex ML project first, publish later | accepted | 2026-11-24 |
+| [CR-0002](change-requests/CR-0002-adapt-to-projects-that-already-keep-notes.md) | Adapt to projects that already keep notes | accepted | 2026-11-24 |

@@ -4,6 +4,7 @@ Generated, never hand-edited. Run after adding records, or let the Stop hook
 remind you. Safe to run repeatedly.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -22,6 +23,14 @@ Read `00-PROJECT-STATE.md` first; this is the map, not the briefing.
 """
 
 
+def _relative(record):
+    """Link target, relative to wherever the index itself lives."""
+    try:
+        return os.path.relpath(record, L.path_for("index").parent).replace("\\", "/")
+    except Exception:
+        return record.name
+
+
 def section(kind, heading, note):
     rows = []
     for p in L.records(kind):
@@ -32,7 +41,7 @@ def section(kind, heading, note):
         extra = ""
         if fm.get("superseded_by") not in (None, "", "null"):
             extra = f" -> superseded by {fm['superseded_by']}"
-        rel = p.relative_to(L.ledger_dir()).as_posix()
+        rel = _relative(p)
         rows.append(f"| [{rid}]({rel}) | {L.title_of(p)} | {status}{extra} | {date} |")
     if not rows:
         return f"\n## {heading}\n\n{note}\n\n_None recorded yet._\n"
@@ -43,11 +52,12 @@ def section(kind, heading, note):
 
 
 def main():
-    if not L.ledger_dir().is_dir():
-        print("no ledger directory found", file=sys.stderr)
+    if not L.ledger_exists():
+        print("no ledger found in this project", file=sys.stderr)
         return 1
 
-    target = L.ledger_dir() / "INDEX.md"
+    target = L.path_for("index")
+    target.parent.mkdir(parents=True, exist_ok=True)
     # Never overwrite a file this script did not write. A project may already
     # keep its own INDEX.md, and clobbering it would destroy work silently.
     if target.is_file():

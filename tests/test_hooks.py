@@ -312,6 +312,100 @@ def test_new_record_refuses_to_clobber():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def make_adopted_repo():
+    """A project shaped like a mature one: big CHANGELOG and STATUS at root."""
+    d = Path(tempfile.mkdtemp(prefix="ledger-adopt-"))
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=d, check=True)
+    subprocess.run(["git", "config", "user.email", "t@t.t"], cwd=d, check=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=d, check=True)
+    (d / "CHANGELOG.md").write_text(
+        "# CHANGELOG\n\n## 2026-11-22 - real history\n\nYears of this.\n",
+        encoding="utf-8")
+    (d / "STATUS.md").write_text(
+        "# STATUS\n\n" + "\n".join(f"status line {i}" for i in range(2000)),
+        encoding="utf-8")
+    lm = d / "docs" / "project-memory"
+    lm.mkdir(parents=True)
+    (lm / "00-BRIEFING.md").write_text(
+        "# Briefing\n\nShort summary. Full log: STATUS.md\n", encoding="utf-8")
+    (d / ".ledger.json").write_text(json.dumps({
+        "version": 1,
+        "paths": {
+            "briefing": "docs/project-memory/00-BRIEFING.md",
+            "changelog": "CHANGELOG.md",
+            "journey": "docs/project-memory/JOURNEY.md",
+            "constraints": "docs/project-memory/CONSTRAINTS.md",
+            "index": "docs/project-memory/INDEX.md",
+            "decisions": "docs/project-memory/decisions",
+            "rejections": "docs/project-memory/rejections",
+            "change_requests": "docs/project-memory/change-requests",
+            "activity": "docs/project-memory/activity",
+        },
+        "adopted": ["changelog"],
+    }, indent=2), encoding="utf-8")
+    return d
+
+
+def test_adopt_existing_project():
+    """The ledger maps onto files a project already keeps, without duplicating."""
+    print("\nAdopting a project that already keeps notes")
+    d = make_adopted_repo()
+    try:
+        env = dict(os.environ, LEDGER_PROJECT_DIR=str(d))
+
+        out, _, _ = run_hook("session_start.py", {"cwd": str(d)})
+        ctx = context_of(out)
+        check("config alone activates the ledger", bool(ctx))
+        check("injects the small briefing", "Short summary" in ctx)
+        check("does not inject the 2000-line STATUS.md",
+              "status line 1500" not in ctx, "big status file leaked in")
+
+        before = (d / "CHANGELOG.md").read_text(encoding="utf-8")
+        r = subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"),
+                            "adr", "Use Parquet for tick storage"],
+                           capture_output=True, text=True, env=env, timeout=30)
+        check("creates the record", r.returncode == 0, r.stderr[:120])
+        after = (d / "CHANGELOG.md").read_text(encoding="utf-8")
+        check("appends to the adopted changelog", len(after) > len(before))
+        check("leaves existing changelog content byte-identical",
+              after.startswith(before))
+        check("creates no duplicate changelog",
+              not (d / "docs" / "project-memory" / "CHANGELOG.md").exists())
+
+        idx = subprocess.run([sys.executable, str(SCRIPTS / "build_index.py")],
+                             capture_output=True, text=True, env=env, timeout=30)
+        check("builds the index at the configured path", idx.returncode == 0,
+              idx.stderr[:120])
+        check("index links the record",
+              "ADR-0001" in (d / "docs" / "project-memory" / "INDEX.md")
+              .read_text(encoding="utf-8"))
+
+        commit_all(d)
+        (d / "model.py").write_text("x = 1\n", encoding="utf-8")
+        with (d / "CHANGELOG.md").open("a", encoding="utf-8") as fh:
+            fh.write("- another entry\n")
+        out2, _, _ = run_hook("stop_gate.py",
+                              {"cwd": str(d), "stop_hook_active": False})
+        check("counts the adopted root changelog as a ledger file", out2 == "",
+              f"warned anyway: {out2[:90]!r}")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_malformed_config_is_not_fatal():
+    """A typo in .ledger.json must not break a session."""
+    print("\nMalformed config")
+    d = make_repo()
+    try:
+        (d / ".ledger.json").write_text("{ this is not json", encoding="utf-8")
+        out, _, code = run_hook("session_start.py", {"cwd": str(d)})
+        check("exits 0", code == 0)
+        check("falls back to the default layout", "All good." in context_of(out),
+              f"got {out[:90]!r}")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_record_scaffolding():
     print("\nRecord scaffolding")
     d = make_repo()
@@ -355,6 +449,7 @@ def main():
               test_prompt_classifier, test_stop_gate,
               test_stop_gate_untracked_regression, test_orphan_detection,
               test_index_refuses_to_clobber, test_new_record_refuses_to_clobber,
+              test_adopt_existing_project, test_malformed_config_is_not_fatal,
               test_record_scaffolding):
         try:
             t()

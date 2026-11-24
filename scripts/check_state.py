@@ -61,16 +61,25 @@ def committed_version(path, cwd):
     return out.stdout if out.returncode == 0 else None
 
 
-def ledger_corpus(ledger, exclude):
-    """Every line of every other file in the ledger."""
+def ledger_corpus(exclude):
+    """Every line of every other ledger file, wherever they are configured."""
+    roots = []
+    for key in ("changelog", "journey", "constraints", "decisions",
+                "rejections", "change_requests"):
+        roots.append(L.path_for(key))
     lines = []
-    for path in sorted(ledger.rglob("*.md")):
-        if path == exclude or "activity" in path.parts:
-            continue
-        try:
-            lines.extend(path.read_text(encoding="utf-8", errors="replace").splitlines())
-        except Exception:
-            continue
+    seen = set()
+    for root in roots:
+        candidates = sorted(root.rglob("*.md")) if root.is_dir() else [root]
+        for path in candidates:
+            if path == exclude or not path.is_file() or path in seen:
+                continue
+            seen.add(path)
+            try:
+                lines.extend(
+                    path.read_text(encoding="utf-8", errors="replace").splitlines())
+            except Exception:
+                continue
     return lines
 
 
@@ -94,10 +103,9 @@ def find_orphans(cwd=None):
     Returns (orphans, reason_if_not_checked).
     """
     cwd = Path(cwd) if cwd else L.project_dir()
-    ledger = cwd / L.LEDGER_DIRNAME
-    state = ledger / L.STATE_FILE
+    state = L.path_for("briefing")
     if not state.is_file():
-        return [], "no state file"
+        return [], "no briefing file"
 
     old = committed_version(state, cwd)
     if old is None:
@@ -111,7 +119,7 @@ def find_orphans(cwd=None):
     if not removed:
         return [], None
 
-    corpus_sets = [content_words(line) for line in ledger_corpus(ledger, state)]
+    corpus_sets = [content_words(line) for line in ledger_corpus(state)]
     corpus_sets += [content_words(line) for line in current]
 
     return [line for line in removed if not is_preserved(line, corpus_sets)], None

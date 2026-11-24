@@ -20,10 +20,9 @@ def body():
     if not L.ledger_exists(payload):
         return  # project does not use the ledger; stay silent
 
-    d = L.ledger_dir(payload)
     parts = ["# Project memory (decision-ledger)", ""]
 
-    state = d / L.STATE_FILE
+    state = L.path_for("briefing", payload)
     if state.is_file():
         parts += ["## Current state", ""]
         parts += L.head(state, MAX_STATE_LINES)
@@ -37,7 +36,7 @@ def body():
             "",
         ]
 
-    constraints = d / L.CONSTRAINTS_FILE
+    constraints = L.path_for("constraints", payload)
     if constraints.is_file():
         # One line per constraint: its heading is written to be self-contained.
         headings = [ln[3:].strip() for ln in L.head(constraints, 300)
@@ -91,7 +90,7 @@ def body():
             parts.append(f"- **{fm.get('id', p.stem)}** {L.title_of(p)} ({fm.get('status')})")
         parts.append("")
 
-    journey = d / L.JOURNEY_FILE
+    journey = L.path_for("journey", payload)
     if journey.is_file():
         parts += ["## Journey, most recent", ""]
         parts += L.tail(journey, 30)

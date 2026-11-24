@@ -43,6 +43,7 @@ are real: they are the design history of the thing you are reading about.
 | `decision-ledger` | Writes a record: decision, rejection, change request or pivot |
 | `cold-start` | Briefs you on a project you have no memory of |
 | `wrap-session` | Flushes unrecorded reasoning before the context is lost |
+| `ledger-adopt` | Fits the ledger around a project that already keeps notes |
 
 ### Five hooks
 
@@ -89,6 +90,19 @@ Stop hook runs it every turn.
 
 ### Adopting it into a project that already keeps notes
 
+Run `/ledger-adopt`. It finds the `CHANGELOG`, `STATUS`, `DECISIONS` or
+`docs/adr/` you already have, proposes a mapping, and writes `.ledger.json`
+only once you approve it. The ledger then appends to your files instead of
+creating a parallel set.
+
+One thing it will not adopt: your status file. The briefing is injected into
+every session and rewritten as state changes, while a maintained `STATUS.md` is
+usually a long append-only log. Pointing one at the other would inject a
+fragment of it into every session and invite rewriting a file you did not want
+rewritten, so the briefing is always a new file that *points at* yours.
+
+It never migrates existing content into records
+([why](docs/project-memory/rejections/REJ-0006-migrate-existing-docs-into-records.md)).
 Nothing here overwrites a file it did not create. `build_index.py` refuses to
 touch an `INDEX.md` it did not generate, records are never overwritten, and the
 skills are instructed to append to existing `CHANGELOG.md`, `JOURNEY.md` and

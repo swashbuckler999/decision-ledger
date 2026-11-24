@@ -3,6 +3,11 @@
 Design rule for everything in this package: a hook must never break the user's
 session. Any unexpected failure is swallowed and the hook exits 0. The ledger is
 a safety net, and a safety net that can crash the trapeze act is worse than none.
+
+Second design rule: a project may already keep these files, by hand, for years.
+Paths are resolved through an optional `.ledger.json` so the ledger can be
+mapped onto what already exists instead of imposing its own layout. Nothing is
+ever moved, reformatted or overwritten -- see ADR-0008 and ADR-0009.
 """
 
 import json
@@ -11,14 +16,34 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+CONFIG_NAME = ".ledger.json"
+STATE_MAX_LINES = 150
+
+# Every path the ledger knows about, relative to the project root. A project
+# overrides any subset of these in .ledger.json; the rest keep these defaults.
+DEFAULTS = {
+    "briefing": "docs/project-memory/00-PROJECT-STATE.md",
+    "changelog": "docs/project-memory/CHANGELOG.md",
+    "journey": "docs/project-memory/JOURNEY.md",
+    "constraints": "docs/project-memory/CONSTRAINTS.md",
+    "index": "docs/project-memory/INDEX.md",
+    "decisions": "docs/project-memory/decisions",
+    "rejections": "docs/project-memory/rejections",
+    "change_requests": "docs/project-memory/change-requests",
+    "activity": "docs/project-memory/activity",
+}
+
+# Which configured path each record kind lives in.
+KIND_KEY = {"adr": "decisions", "rej": "rejections", "cr": "change_requests"}
+PREFIX = {"adr": "ADR", "rej": "REJ", "cr": "CR"}
+
+# Back-compat names used across the scripts.
 LEDGER_DIRNAME = Path("docs") / "project-memory"
 STATE_FILE = "00-PROJECT-STATE.md"
 CHANGELOG_FILE = "CHANGELOG.md"
 JOURNEY_FILE = "JOURNEY.md"
 CONSTRAINTS_FILE = "CONSTRAINTS.md"
 SUBDIRS = {"adr": "decisions", "rej": "rejections", "cr": "change-requests"}
-PREFIX = {"adr": "ADR", "rej": "REJ", "cr": "CR"}
-STATE_MAX_LINES = 150
 
 
 def read_hook_input():
@@ -40,17 +65,74 @@ def project_dir(payload=None):
     return Path(os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd()))
 
 
+def config(payload=None):
+    """The project's .ledger.json, or {} when it has none.
+
+    A malformed config is treated as absent rather than fatal: a typo in a
+    config file must not stop a session.
+    """
+    path = project_dir(payload) / CONFIG_NAME
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def path_for(key, payload=None):
+    """Absolute path for a ledger key, honouring .ledger.json overrides."""
+    paths = config(payload).get("paths") or {}
+    rel = paths.get(key) or DEFAULTS[key]
+    return project_dir(payload) / rel
+
+
+def is_adopted(key, payload=None):
+    """True when this file predates the ledger and belongs to someone else.
+
+    Adopted files are appended to in whatever style is already there, and are
+    never rewritten, reordered or reformatted.
+    """
+    return key in (config(payload).get("adopted") or [])
+
+
 def ledger_dir(payload=None):
+    """The default ledger directory. Still used where a project has no config."""
     return project_dir(payload) / LEDGER_DIRNAME
 
 
 def ledger_exists(payload=None):
     """True only if this project actually uses the ledger.
 
-    Every hook checks this first and exits silently when false, so installing
-    the plugin globally does not spray files into unrelated projects.
+    Either it has a .ledger.json, or it has the default directory. Every hook
+    checks this first and exits silently when false, so installing the plugin
+    globally does not spray files into unrelated projects.
     """
+    if (project_dir(payload) / CONFIG_NAME).is_file():
+        return True
     return ledger_dir(payload).is_dir()
+
+
+def ledger_paths(payload=None):
+    """Every path the ledger owns or has adopted, relative to the project.
+
+    Used to tell ledger edits apart from code edits.
+    """
+    paths = config(payload).get("paths") or {}
+    out = []
+    for key, default in DEFAULTS.items():
+        out.append(Path(paths.get(key) or default).as_posix())
+    return out
+
+
+def is_ledger_path(rel_path, payload=None):
+    """True if a repo-relative path belongs to the ledger."""
+    rel = Path(rel_path).as_posix()
+    for known in ledger_paths(payload):
+        if rel == known or rel.startswith(known.rstrip("/") + "/"):
+            return True
+    return False
 
 
 def today():
@@ -63,7 +145,7 @@ def now_iso():
 
 def records(kind, payload=None):
     """All record paths of one kind, sorted."""
-    d = ledger_dir(payload) / SUBDIRS[kind]
+    d = path_for(KIND_KEY[kind], payload)
     if not d.is_dir():
         return []
     return sorted(p for p in d.glob("*.md") if p.name != "README.md")

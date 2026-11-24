@@ -20,12 +20,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _ledger as L  # noqa: E402
 import check_state  # noqa: E402
 
-LEDGER_PREFIX = L.LEDGER_DIRNAME.as_posix()
-
 MESSAGE = """\
 Code changed this session but nothing was written to the decision ledger.
 
-Changed outside docs/project-memory/:
+Changed outside the ledger:
 {changed}
 
 If any of that involved a choice between options, an idea you tried and
@@ -37,12 +35,14 @@ is needed and you can ignore this.
 """
 
 ORPHAN_MESSAGE = """\
-Content was removed from {state} and exists nowhere else in the ledger:
+Content was removed from the briefing file and exists nowhere else in the
+ledger ({state}):
 
 {orphans}
 
-{state} is the only mutable file here, so this content has no other copy. If it
-still matters, write it somewhere append-only before the change is committed:
+That file is the only mutable one here, so this content has no other copy. If
+it still matters, write it somewhere append-only before the change is
+committed:
 
   a constraint or access rule     -> {constraints}
   a decision, rejection or change -> a numbered record
@@ -113,9 +113,9 @@ def orphan_warning(cwd):
                                  journey=L.JOURNEY_FILE)
 
 
-def unrecorded_warning(cwd, files):
-    ledger_touched = [f for f in files if f.startswith(LEDGER_PREFIX)]
-    code_touched = [f for f in files if not f.startswith(LEDGER_PREFIX)]
+def unrecorded_warning(cwd, files, payload):
+    ledger_touched = [f for f in files if L.is_ledger_path(f, payload)]
+    code_touched = [f for f in files if not L.is_ledger_path(f, payload)]
     if not code_touched or ledger_touched:
         return None
     if already_reported(cwd, "last-nag", digest_of(code_touched)):
@@ -138,7 +138,8 @@ def body():
     if files is None:
         return  # not a git repo, or git unavailable: stay quiet
 
-    warnings = [w for w in (orphan_warning(cwd), unrecorded_warning(cwd, files)) if w]
+    warnings = [w for w in (orphan_warning(cwd),
+                            unrecorded_warning(cwd, files, payload)) if w]
     if not warnings:
         return
     text = "\n\n".join(warnings)

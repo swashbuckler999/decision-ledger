@@ -29,10 +29,10 @@ def body():
     except Exception:
         pass
 
-    if L.LEDGER_DIRNAME.as_posix() in Path(target).as_posix():
+    if L.is_ledger_path(target, payload):
         return  # do not log edits to the ledger itself
 
-    folder = L.ledger_dir(payload) / "activity"
+    folder = L.path_for("activity", payload)
     folder.mkdir(parents=True, exist_ok=True)
     gi = folder / ".gitignore"
     if not gi.exists():

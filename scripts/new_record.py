@@ -136,7 +136,7 @@ def main():
         print("a title is required", file=sys.stderr)
         return 1
 
-    folder = L.ledger_dir() / L.SUBDIRS[kind]
+    folder = L.path_for(L.KIND_KEY[kind])
     folder.mkdir(parents=True, exist_ok=True)
 
     num = L.next_id(kind)
@@ -153,7 +153,7 @@ def main():
     )
 
     L.append_line(
-        L.ledger_dir() / L.CHANGELOG_FILE,
+        L.path_for("changelog"),
         f"- {L.today()} **{rid}** {title} - `{path.relative_to(L.project_dir())}`",
     )
     print(path)

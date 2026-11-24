@@ -21,3 +21,6 @@ carries the reasoning.
 - 2026-11-24 **ADR-0006** Constraints get their own append-only file - `docs/project-memory/decisions/ADR-0006-constraints-get-their-own-append-only-file.md`
 - 2026-11-24 **ADR-0007** Mechanical check for state-file loss - `docs/project-memory/decisions/ADR-0007-mechanical-check-for-state-file-loss.md`
 - 2026-11-24 **ADR-0008** Never overwrite a file we did not write - `docs/project-memory/decisions/ADR-0008-never-overwrite-a-file-we-did-not-write.md`
+- 2026-11-24 **CR-0002** Adapt to projects that already keep notes - `docs/project-memory/change-requests/CR-0002-adapt-to-projects-that-already-keep-notes.md`
+- 2026-11-24 **ADR-0009** Adopt what exists, own only the briefing - `docs/project-memory/decisions/ADR-0009-adopt-what-exists-own-only-the-briefing.md`
+- 2026-11-24 **REJ-0006** Migrate existing documents into ledger records - `docs/project-memory/rejections/REJ-0006-migrate-existing-docs-into-records.md`

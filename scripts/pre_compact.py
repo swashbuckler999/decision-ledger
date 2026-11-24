@@ -43,7 +43,7 @@ def body():
         return
 
     trigger = payload.get("trigger", "unknown")
-    log = L.ledger_dir(payload) / "activity" / f"{L.today()}.md"
+    log = L.path_for("activity", payload) / f"{L.today()}.md"
     L.append_line(log, f"- {L.now_iso()} **compaction checkpoint** (trigger: {trigger})")
 
 
