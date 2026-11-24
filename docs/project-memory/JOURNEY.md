@@ -453,3 +453,65 @@ And the unbroken pattern underneath all four: **every failure was silent.** The
 CRLF rewrite, the index overwriting a hand-written file, the changelog dropping
 an entry, and now a reminder that simply never arrives. All four reported
 success.
+
+## 2026-11-25 — simulating the two things that looked unsimulable
+
+The owner pushed back on the claim that the last gap needed a live session:
+
+> Can't it be simulate?
+> If require pull/copy a project from those 82 in a sandbox and do the trial
+> run there.
+
+Both halves were right, and both found defects.
+
+### Real projects, real copies
+
+Four corpus passes had been read-only, so the scanner was well tested against
+real material and **every write path was not** — adoption, record creation,
+index generation and changelog insertion had only ever run against fixtures
+this project wrote for itself.
+
+Three projects were copied into a sandbox, one per situation, and the whole
+flow run on the copies. Each original was fingerprinted before and after: every
+file's size and mtime, content hashes of anything the ledger might touch, git
+HEAD, dirty count. All three originals came back identical.
+
+The result worth keeping is the mature project's changelog: **369,195 bytes of
+someone's real writing, +138 bytes, inserted at the top in the file's own
+`## date - title` style, with every original byte after the heading surviving
+verbatim** and the line endings unchanged. The adoption promise is no longer a
+claim about fixtures.
+
+The adr-tools project adopted cleanly too — new record filed `0005-` after
+their `0001`–`0004`, bare naming matched, `id: ADR-0005` kept inside, their
+four records byte-identical.
+
+### Simulating whether a skill gets chosen
+
+This looked impossible and was not. Selection is a model judgement made from
+exactly one input: the `name`, `description` and `when_to_use` the harness
+advertises. Give a model only that text and a user message, with no other
+context, and the real decision is reproduced.
+
+The part that mattered: **the author cannot run this test.** The question is
+whether the text works for a reader who did not write it, and this session
+wrote it.
+
+Three rounds, twenty-two scenarios. The first found all ten right and three
+real overlaps invisible from the inside — "hand off" claimed by three skills at
+once, adopt and backfill both claiming "installing the ledger" with the
+tie-break citing a tool output the model never sees, and "when the user pushes
+back on something" firing on *"use single quotes"*.
+
+Then the lesson of the day. **The rewrite that fixed those overlaps introduced
+a worse bug.** Adding "if the project has no ledger yet, use ledger-adopt or
+ledger-backfill first" was right for a project with history and wrong for a new
+one: adopt needs existing notes, backfill needs existing commits, and a
+brand-new repository has neither. A decision in a fresh project — the simplest
+case this plugin has — now selected nothing. Round two caught it at once;
+round three, with all four traps together, came back clean.
+
+What generalises: a description written by the person who built the thing
+cannot be reviewed by them. The overlaps were glaring in the report and
+invisible in the writing, and the only reason they surfaced is that something
+with no memory of writing them was asked to use them.

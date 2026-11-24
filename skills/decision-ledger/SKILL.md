@@ -1,7 +1,7 @@
 ---
 name: decision-ledger
 description: Record a decision, a rejection, a change request or a mid-flight pivot into the project's append-only ledger under docs/project-memory/. Captures the discussion, the reasoning, the alternatives that lost and the condition that would reverse it, so no reasoning is lost when the conversation ends.
-when_to_use: Use when a discussion settles on a choice, when an option or library is turned down, when the user changes scope or direction, when a previous decision is reversed, or when the user pushes back on something. Also use when asked to wrap up, hand off, or record a decision.
+when_to_use: Use when a discussion settles on a choice, when an option or library is turned down, when the user changes scope or direction, when a previous decision is reversed, or when the user corrects you in a way that sets a lasting constraint. Also use when asked to record a decision. Do NOT use for one-off style preferences or local edits -- only for something that will still bind next month. For ONE record as it happens; to flush a whole session use wrap-session instead. In a new project with no ledger yet, this skill creates it. Only if the project has history to fit around -- notes it already keeps, or months of commits -- use ledger-adopt or ledger-backfill first.
 allowed-tools: Read, Write, Edit, Bash(python *), Bash(git diff *), Bash(git status *), Bash(git log *)
 ---
 

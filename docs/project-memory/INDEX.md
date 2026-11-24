@@ -39,6 +39,8 @@ What was chosen, and why.
 | [ADR-0026](decisions/ADR-0026-install-the-plugin-and-drive-it-from-the-install.md) | Install the plugin and drive it from the installed copy | accepted | 2026-11-25 |
 | [ADR-0027](decisions/ADR-0027-replay-whole-sessions-not-single-hooks.md) | Replay whole sessions, not single hooks | accepted | 2026-11-25 |
 | [ADR-0028](decisions/ADR-0028-the-activity-trail-is-not-a-recording.md) | The activity trail is not a recording | accepted | 2026-11-25 |
+| [ADR-0029](decisions/ADR-0029-trial-the-whole-flow-on-copies-of-real-projects.md) | Trial the whole flow on copies of real projects | accepted | 2026-11-25 |
+| [ADR-0030](decisions/ADR-0030-test-skill-selection-against-the-advertised-text.md) | Test skill selection against the advertised text | accepted | 2026-11-25 |
 
 
 ## Rejections

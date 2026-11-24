@@ -1,7 +1,7 @@
 ---
 name: ledger-backfill
 description: Reconstruct a decision ledger for a project that has been worked on for months but never kept notes. Mines git history for the decisions, rejections and constraints behind what already exists, drafts records marked as reconstructed, and leaves the project cold-start ready. Writes no record whose reasoning cannot be sourced or confirmed.
-when_to_use: Use when installing the ledger into a project that has real history but no memory files, when the adoption scanner reports "NOT greenfield", or when the user asks to document a project retroactively, catch the docs up, or make an existing project cold-start ready.
+when_to_use: Use when setting up the ledger in a project that has REAL HISTORY BUT NO NOTES -- months of commits and nothing written down -- or when the user asks to document a project retroactively, catch the docs up, or make it cold-start ready. If the project already keeps notes by hand, run ledger-adopt FIRST and this one after -- a project with both a hand-kept CHANGELOG and a long unwritten history needs adoption to map the files before reconstruction fills them.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(python *), Bash(git log *), Bash(git show *), Bash(git status *)
 ---
 

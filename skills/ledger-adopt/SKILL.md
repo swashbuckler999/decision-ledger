@@ -1,7 +1,7 @@
 ---
 name: ledger-adopt
 description: Set up the decision ledger in a project that already keeps its own notes. Finds existing changelogs, status files and decision records, proposes a mapping onto them, and writes .ledger.json only after you approve it. Never moves, reformats or overwrites anything.
-when_to_use: Use when installing the ledger into an existing project, when the user asks to adopt or retrofit it, or when a project has a CHANGELOG, STATUS, DECISIONS or docs/adr directory it already maintains by hand.
+when_to_use: Use when setting up the ledger in a project that ALREADY KEEPS NOTES -- a CHANGELOG, STATUS, DECISIONS or docs/adr it maintains by hand -- or when the user asks to adopt or retrofit it. If the project keeps no notes at all but has months of commits, use ledger-backfill instead; if it has both, run this one first and backfill after.
 allowed-tools: Read, Write, Glob, Grep, Bash(python *), Bash(git log *), Bash(git status *)
 ---
 

@@ -42,6 +42,11 @@ Working skeleton, not yet exercised in anger.
 - Installed into a throwaway project and exercised from the installed copy —
   done; 658 tokens always-on per session (ADR-0026)
 - Installed into a real project — **not yet**
+- The full write path trialled on copies of three real corpus projects, with
+  the originals proved untouched (ADR-0029)
+- Skill *selection* simulated in a fresh context over three rounds; all five
+  `when_to_use` fields rewritten after it found three overlaps, and one
+  regression the rewrite itself introduced (ADR-0030)
 - Published — **yes**, https://github.com/swashbuckler999/decision-ledger (public)
 
 ## How it works, in one paragraph
@@ -59,7 +64,7 @@ the user's own words.
 
 ## Immediate next steps
 
-1. Run one interactive session with a working model. Registration is now
+1. Run one interactive session with a working model. Registration is
    **verified** — `claude plugin details` reports all five skills and all five
    hooks, and every hook was driven from the installed copy and behaved
    (ADR-0026). What is still unproven: that the harness *calls* them during a

@@ -1,7 +1,7 @@
 ---
 name: cold-start
 description: Brief yourself on a project you have no memory of by reading its decision ledger. Produces an orientation covering current state, accepted decisions, settled rejections you must not re-propose, open questions and the next step.
-when_to_use: Use at the start of work on an unfamiliar project, when resuming after a break, when the user asks "where were we", "catch up", "what is the state of this", or when handing the project to someone else.
+when_to_use: Use at the start of work on an unfamiliar project, when resuming after a break, or when the user asks "where were we", "catch up", "what is the state of this", or "bring me up to speed". This is for ARRIVING at a project; to write the state down before leaving one, use wrap-session.
 allowed-tools: Read, Glob, Grep, Bash(python *), Bash(git log *)
 ---
 
