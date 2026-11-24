@@ -11,7 +11,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude_Code-2.1+-d97757?style=for-the-badge&labelColor=1c1917)](https://claude.com/claude-code)
 [![Python](https://img.shields.io/badge/Python-3.9+-3776ab?style=for-the-badge&labelColor=1c1917&logo=python&logoColor=white)](https://www.python.org/)
 [![Dependencies](https://img.shields.io/badge/dependencies-none-16a34a?style=for-the-badge&labelColor=1c1917)](#requirements)
-[![Checks](https://img.shields.io/badge/checks-200_passing-16a34a?style=for-the-badge&labelColor=1c1917)](#tests)
+[![Checks](https://img.shields.io/badge/checks-231_passing-16a34a?style=for-the-badge&labelColor=1c1917)](#tests)
 [![Corpus](https://img.shields.io/badge/designed_against-82_real_projects-6e5494?style=for-the-badge&labelColor=1c1917)](docs/corpus-survey.md)
 [![License](https://img.shields.io/badge/license-MIT-57534e?style=for-the-badge&labelColor=1c1917)](LICENSE)
 
@@ -194,16 +194,16 @@ flowchart TD
     DISC --> REJ["🚫  Rejection<br/>REJ-NNNN"]
     DISC --> CR["🔄  Change request<br/>CR-NNNN"]
 
-    DEC --> R1["Reasoning<br/>why each alternative lost"]
-    REJ --> R2["Reasoning<br/>the disqualifying objection"]
-    CR  --> R3["Scope impact<br/>the blast radius, honestly"]
+    DEC --> R1["Reasoning<br/>why alternatives lost"]
+    REJ --> R2["Reasoning<br/>the objection"]
+    CR  --> R3["Scope impact<br/>the blast radius"]
 
-    R1 --> COST["Cost<br/>what this gives up"]
-    COST --> CONC["Conclusion<br/>the rule that now binds"]
-    R2 --> TRIG["Re-evaluation trigger<br/>what would reopen it"]
+    R1 --> COST["Cost<br/>what it gives up"]
+    COST --> CONC["Conclusion<br/>the rule that binds"]
+    R2 --> TRIG["Re-evaluation<br/>what reopens it"]
     R3 --> CONC
 
-    CONC --> DIV["📌  Diversions and Pivots<br/>appended inside the record,<br/>never overwriting it"]
+    CONC --> DIV["📌  Diversions and Pivots<br/>appended inside the record"]
 
     classDef disc fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#78350f
     classDef dec  fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
@@ -453,7 +453,7 @@ No third-party packages. No network access. Nothing leaves the machine.
 python tests\test_hooks.py
 ```
 
-**200 checks**, dependency-free. Each one drives a hook with the JSON payload
+**231 checks**, dependency-free. Each one drives a hook with the JSON payload
 Claude Code really sends, or a script against a throwaway repository on disk.
 Every bug this project has had keeps a named regression test — the
 untracked-directory bug it shipped with, the changelog write that silently
@@ -481,7 +481,7 @@ built and thrown away.
 
 > **v0.1.0 — early, and honest about it.**
 >
-> The scripts and hooks carry 200 checks, have been run read-only against all 82
+> The scripts and hooks carry 231 checks, have been run read-only against all 82
 > corpus projects, and the three adoption situations are simulated end to end
 > against sandbox copies.
 >
