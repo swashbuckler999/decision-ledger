@@ -57,7 +57,7 @@ def changed_files(cwd):
     try:
         out = subprocess.run(
             ["git", "status", "--porcelain", "--untracked-files=all"],
-            cwd=cwd, capture_output=True, text=True, timeout=10,
+            cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10,
         )
     except Exception:
         return None

@@ -55,7 +55,7 @@ def committed_version(path, cwd):
         return None
     try:
         out = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=cwd,
-                             capture_output=True, text=True, timeout=15)
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15)
     except Exception:
         return None
     return out.stdout if out.returncode == 0 else None

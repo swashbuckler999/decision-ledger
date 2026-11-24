@@ -187,6 +187,9 @@ def append_line(path, line):
 
 
 DEFAULT_CHANGELOG_ENTRY = "- {date} **{id}** {title} - `{path}`"
+# Surveying 82 real projects found 20 newest-first changelogs to 1
+# oldest-first. The default follows the evidence; see ADR-0011.
+DEFAULT_ORDER = "newest-first"
 
 
 def _write_atomic(path, text):
@@ -229,7 +232,7 @@ def add_changelog_entry(text, payload=None):
         _write_atomic(path, block)
         return path
 
-    order = (config(payload).get("changelog_order") or "oldest-first").lower()
+    order = (config(payload).get("changelog_order") or DEFAULT_ORDER).lower()
     original = path.read_text(encoding="utf-8", errors="replace")
 
     if order != "newest-first":

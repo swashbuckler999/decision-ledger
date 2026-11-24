@@ -16,9 +16,35 @@ this skill is one new config file and some new directories. If you find
 yourself about to restructure someone's changelog, stop — that is the migrate
 operation, and it is deliberately not built.
 
-## 1. Find what is already there
+## 1. Run the scanner. Do not do this by eye.
 
-Look for, at the project root and one level into `docs/`:
+```
+python scripts/scan_project.py --propose <project path>
+```
+
+It prints a draft `.ledger.json` on stdout and review notes on stderr. It is
+read-only — it never writes to the project it scans.
+
+This step is mechanical on purpose. Establishing a changelog's order and entry
+format decides where every future entry lands, in a file that may hold years
+of work, and it is a deterministic property of the file rather than a
+judgement. The scanner reads it the same way every time; prose does not. See
+ADR-0012.
+
+It uses three signals in order of authority: an order the file **declares** in
+words, the **position** of its newest and oldest dates, and finally **git
+history** — whether added lines land near the top or the bottom. In the corpus
+behind this design, git history was the only thing that settled 7 of 26 files.
+
+What it cannot settle, it marks `unconfirmed` and you must ask about. Do not
+quietly accept the default in that case: that is the one place a wrong answer
+puts entries where nobody will look.
+
+For reference, the shapes this was built against are in `docs/corpus-survey.md`.
+
+## 1b. What the scanner looks for
+
+At the project root and one level into `docs/`:
 
 | Looking for | Typical names |
 |---|---|

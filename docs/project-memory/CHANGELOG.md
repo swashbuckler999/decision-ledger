@@ -25,3 +25,6 @@ carries the reasoning.
 - 2026-11-24 **ADR-0009** Adopt what exists, own only the briefing - `docs/project-memory/decisions/ADR-0009-adopt-what-exists-own-only-the-briefing.md`
 - 2026-11-24 **REJ-0006** Migrate existing documents into ledger records - `docs/project-memory/rejections/REJ-0006-migrate-existing-docs-into-records.md`
 - 2026-11-24 **ADR-0010** Respect the changelog's own order and format - `docs/project-memory/decisions/ADR-0010-respect-the-changelogs-own-order-and-format.md`
+- 2026-11-24 **ADR-0011** Defaults come from the corpus, not intuition - `docs/project-memory/decisions/ADR-0011-defaults-come-from-the-corpus-not-intuition.md`
+- 2026-11-24 **ADR-0012** The scan is mechanical, the mapping is approved - `docs/project-memory/decisions/ADR-0012-the-scan-is-mechanical-the-mapping-is-approved.md`
+- 2026-11-24 **REJ-0007** Publishing the owner's project names - `docs/project-memory/rejections/REJ-0007-publishing-the-owners-project-names.md`

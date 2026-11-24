@@ -21,6 +21,8 @@ What was chosen, and why.
 | [ADR-0008](decisions/ADR-0008-never-overwrite-a-file-we-did-not-write.md) | Never overwrite a file we did not write | accepted | 2026-11-24 |
 | [ADR-0009](decisions/ADR-0009-adopt-what-exists-own-only-the-briefing.md) | Adopt what exists, own only the briefing | accepted | 2026-11-24 |
 | [ADR-0010](decisions/ADR-0010-respect-the-changelogs-own-order-and-format.md) | Respect the changelog's own order and format | accepted | 2026-11-24 |
+| [ADR-0011](decisions/ADR-0011-defaults-come-from-the-corpus-not-intuition.md) | Defaults come from the corpus, not intuition | accepted | 2026-11-24 |
+| [ADR-0012](decisions/ADR-0012-the-scan-is-mechanical-the-mapping-is-approved.md) | The scan is mechanical, the mapping is approved | accepted | 2026-11-24 |
 
 
 ## Rejections
@@ -35,6 +37,7 @@ Settled arguments. **Read these before proposing anything new.**
 | [REJ-0004](rejections/REJ-0004-blocking-stop-hook-by-default.md) | Blocking Stop hook by default | rejected | 2026-11-24 |
 | [REJ-0005](rejections/REJ-0005-run-the-ledger-on-a-cheaper-model.md) | Run the ledger on a cheaper model, in a subagent | rejected | 2026-11-24 |
 | [REJ-0006](rejections/REJ-0006-migrate-existing-docs-into-records.md) | Migrate existing documents into ledger records | rejected | 2026-11-24 |
+| [REJ-0007](rejections/REJ-0007-publishing-the-owners-project-names.md) | Publishing the owner's project names | rejected | 2026-11-24 |
 
 
 ## Change requests

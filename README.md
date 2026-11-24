@@ -90,9 +90,10 @@ Stop hook runs it every turn.
 
 ### Adopting it into a project that already keeps notes
 
-Run `/ledger-adopt`. It finds the `CHANGELOG`, `STATUS`, `DECISIONS` or
-`docs/adr/` you already have, proposes a mapping, and writes `.ledger.json`
-only once you approve it. The ledger then appends to your files instead of
+Run `/ledger-adopt`. A read-only scanner finds the `CHANGELOG`, `STATUS`,
+`DECISIONS` or `docs/adr/` you already have, works out your changelog's order
+and entry format from the file and its git history, proposes a mapping, and
+writes `.ledger.json` only once you approve it. The ledger then appends to your files instead of
 creating a parallel set.
 
 One thing it will not adopt: your status file. The briefing is injected into
@@ -147,6 +148,14 @@ Full instructions, including backfilling an existing project and the trade-offs
 of system-wide installation, are in **[docs/INSTALL.md](docs/INSTALL.md)**.
 
 ---
+
+## Designed against real projects
+
+The adoption rules are not guesswork. They were built against a corpus of 82
+real projects: 45% of them already kept notes, 20 of 26 changelogs were
+newest-first, and all 26 used `##` headings rather than bullets. Three of this
+plugin's own defaults were wrong and were corrected from that data — see
+[docs/corpus-survey.md](docs/corpus-survey.md).
 
 ## Requirements
 

@@ -76,3 +76,14 @@ already public in `LICENSE`, both manifests and the commit metadata — that was
 intended. Nothing else personal should join it: no paths from the development
 machine, no account names beyond the repo owner, no project details from the
 Forex ML work this plugin was built for.
+
+---
+
+## The corpus this was designed against is private
+
+The adoption rules were derived from 82 real projects on the owner's machine.
+Aggregate findings are published in `docs/corpus-survey.md`; the project names
+are not, and must not be added. Several are personal or client names.
+
+Re-running `python scripts/scan_project.py --survey <parent>` reproduces the
+data locally. Keep its output out of this repository.

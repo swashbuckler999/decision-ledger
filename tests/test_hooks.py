@@ -366,9 +366,13 @@ def test_adopt_existing_project():
                            capture_output=True, text=True, env=env, timeout=30)
         check("creates the record", r.returncode == 0, r.stderr[:120])
         after = (d / "CHANGELOG.md").read_text(encoding="utf-8")
-        check("appends to the adopted changelog", len(after) > len(before))
-        check("leaves existing changelog content byte-identical",
-              after.startswith(before))
+        check("adds to the adopted changelog", len(after) > len(before))
+        # The default is newest-first, so the entry goes above the first entry
+        # heading rather than at the end. Every original line must survive.
+        check("keeps every original line",
+              all(ln in after for ln in before.splitlines() if ln.strip()))
+        check("entry lands above the newest existing entry",
+              after.index("ADR-0001") < after.index("## 2026-11-22"))
         check("creates no duplicate changelog",
               not (d / "docs" / "project-memory" / "CHANGELOG.md").exists())
 
@@ -436,7 +440,22 @@ def test_newest_first_changelog_insertion():
         check("file grew", len(new) > len(original))
         check("no temp file left behind", not list(d.glob("*.ledger-tmp")))
 
-        # Default ordering must still append.
+        # Oldest-first, declared explicitly, must still append to the bottom.
+        (d / ".ledger.json").write_text(json.dumps({
+            "version": 1,
+            "paths": {"changelog": "CHANGELOG.md",
+                      "decisions": "docs/project-memory/decisions",
+                      "briefing": "docs/project-memory/00-BRIEFING.md"},
+            "changelog_order": "oldest-first",
+        }, indent=2), encoding="utf-8")
+        subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"),
+                        "adr", "Second one"], capture_output=True, text=True,
+                       env=env, timeout=30)
+        tail_text = (d / "CHANGELOG.md").read_text(encoding="utf-8").splitlines()[-1]
+        check("oldest-first appends to the bottom", "ADR-0002" in tail_text,
+              tail_text[:70])
+
+        # With no order declared at all, the default is newest-first.
         (d / ".ledger.json").write_text(json.dumps({
             "version": 1,
             "paths": {"changelog": "CHANGELOG.md",
@@ -444,13 +463,90 @@ def test_newest_first_changelog_insertion():
                       "briefing": "docs/project-memory/00-BRIEFING.md"},
         }, indent=2), encoding="utf-8")
         subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"),
-                        "adr", "Second one"], capture_output=True, text=True,
+                        "adr", "Third one"], capture_output=True, text=True,
                        env=env, timeout=30)
-        tail_text = (d / "CHANGELOG.md").read_text(encoding="utf-8").splitlines()[-1]
-        check("oldest-first still appends to the bottom", "ADR-0002" in tail_text,
-              tail_text[:70])
+        text = (d / "CHANGELOG.md").read_text(encoding="utf-8")
+        check("default is newest-first", text.index("ADR-0003") < text.index("ADR-0001"),
+              "default did not insert at the top")
     finally:
         shutil.rmtree(d, ignore_errors=True)
+
+
+def test_scanner_detects_real_shapes():
+    """The scanner against the shapes actually found in 82 real projects.
+
+    Each fixture below is modelled on a specimen from that survey: a
+    newest-first file with ## headings, one that declares its order in words,
+    an oldest-first file, and a single-entry file that cannot be judged.
+    """
+    print("\nConvention scanner")
+    import importlib
+    sys.path.insert(0, str(SCRIPTS))
+    scan_project = importlib.import_module("scan_project")
+
+    cases = {
+        "newest-first with ## headings": (
+            "# CHANGELOG\n\n## 2026-11-22 - latest thing\n\nProse.\n\n"
+            "## 2026-10-18 - older thing\n\nProse.\n",
+            "newest-first", "##", True),
+        "declares its own order": (
+            "# CHANGELOG\n\nNewest first.\n\n## 2026-11-20 - a thing\n\nProse.\n",
+            "newest-first", "##", True),
+        "oldest-first": (
+            "# CHANGELOG\n\n## 2026-01-02 - first\n\nProse.\n\n"
+            "## 2026-11-20 - last\n\nProse.\n",
+            "oldest-first", "##", True),
+        "single entry, unjudgeable": (
+            "# CHANGELOG\n\n## 2026-11-14 - only entry\n\nProse.\n",
+            "single-entry", "##", False),
+        "version headings, no ISO dates": (
+            "# Changelog\n\n## v2 (Current - June 2026)\n\n- thing\n\n"
+            "## v1\n\n- thing\n",
+            None, "##", False),
+    }
+    d = Path(tempfile.mkdtemp(prefix="ledger-scan-"))
+    try:
+        for name, (text, want_order, want_style, want_conf) in cases.items():
+            f = d / "CHANGELOG.md"
+            f.write_text(text, encoding="utf-8")
+            shape = scan_project.changelog_shape(f)
+            check(f"{name}: order", shape["order"] == want_order,
+                  f"got {shape['order']!r}")
+            check(f"{name}: style", shape["entry_style"] == want_style,
+                  f"got {shape['entry_style']!r}")
+            check(f"{name}: confidence", shape["order_confident"] == want_conf,
+                  f"got {shape['order_confident']!r}")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+    # A project with a big STATUS.md must never have it adopted as the briefing.
+    d2 = make_adopted_repo()
+    try:
+        (d2 / ".ledger.json").unlink()
+        cfg, review = scan_project.propose(d2)
+        check("adopts the existing changelog", "changelog" in cfg["adopted"])
+        check("never adopts the status file", "status" not in cfg["adopted"])
+        check("briefing stays ledger-owned",
+              cfg["paths"]["briefing"].startswith("docs/project-memory/"))
+        check("warns about the unadopted status file",
+              any("STATUS.md" in r for r in review))
+        check("copies the entry format", "changelog_entry" in cfg)
+    finally:
+        shutil.rmtree(d2, ignore_errors=True)
+
+    # An unjudgeable changelog must be written down as unconfirmed, not omitted.
+    d3 = Path(tempfile.mkdtemp(prefix="ledger-scan2-"))
+    try:
+        (d3 / "CHANGELOG.md").write_text(
+            "# CHANGELOG\n\n## 2026-11-14 - only entry\n\nProse.\n",
+            encoding="utf-8")
+        cfg, review = scan_project.propose(d3)
+        check("marks an undetermined order unconfirmed",
+              cfg.get("unconfirmed") == ["changelog_order"], str(cfg.get("unconfirmed")))
+        check("tells the caller to ask",
+              any("ASK the user" in r for r in review))
+    finally:
+        shutil.rmtree(d3, ignore_errors=True)
 
 
 def test_malformed_config_is_not_fatal():
@@ -511,6 +607,7 @@ def main():
               test_stop_gate_untracked_regression, test_orphan_detection,
               test_index_refuses_to_clobber, test_new_record_refuses_to_clobber,
               test_adopt_existing_project, test_newest_first_changelog_insertion,
+              test_scanner_detects_real_shapes,
               test_malformed_config_is_not_fatal,
               test_record_scaffolding):
         try:

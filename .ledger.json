@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "changelog_order": "oldest-first",
+  "notes": "This repo's own CHANGELOG.md was written oldest-first before the default flipped to newest-first in ADR-0011. Declared explicitly so the file stays internally consistent rather than growing from both ends."
+}
