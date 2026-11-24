@@ -549,6 +549,48 @@ def test_scanner_detects_real_shapes():
         shutil.rmtree(d3, ignore_errors=True)
 
 
+def test_role_classification():
+    """File-name classification, using the names that actually fooled it.
+
+    Every "should not match" below is a real filename from the 82-project
+    survey that the first implementation classified as a journey. Journey is
+    an adopted role, so each one was a file the ledger would have started
+    writing session narrative into.
+    """
+    print("\nRole classification")
+    import importlib
+    sys.path.insert(0, str(SCRIPTS))
+    scan_project = importlib.import_module("scan_project")
+
+    should_match = {
+        "CHANGELOG.md": "changelog",
+        "CHANGES.md": "changelog",
+        "JOURNEY.md": "journey",
+        "SESSION_LOG.md": "journey",
+        "docs/DEVLOG.md": "journey",
+        "STATUS.md": "status",
+        "CONSTRAINTS.md": "constraints",
+        "PLAN.md": "plan",
+        "README.md": "readme",
+        "NOTES.md": "journey",
+    }
+    should_not = [
+        "docs/API_NOTES.md",
+        "docs/PLATFORM_NOTES.md",
+        "docs/02-research-notes.md",
+        "VIDEO_DOWNLOAD_research_log.md",
+        "docs/capturing-screenshots.md",
+        "docs/news-names.md",
+        "docs/HANDOVER.md",
+    ]
+    for name, want in should_match.items():
+        got = scan_project.role_of(Path(name))
+        check(f"{name} -> {want}", got == want, f"got {got!r}")
+    for name in should_not:
+        got = scan_project.role_of(Path(name))
+        check(f"{name} -> nothing", got is None, f"wrongly classified as {got!r}")
+
+
 def test_refuses_to_rewrite_non_utf8_changelog():
     """A changelog that is not valid UTF-8 is left completely alone.
 
@@ -644,6 +686,7 @@ def main():
               test_index_refuses_to_clobber, test_new_record_refuses_to_clobber,
               test_adopt_existing_project, test_newest_first_changelog_insertion,
               test_scanner_detects_real_shapes,
+              test_role_classification,
               test_refuses_to_rewrite_non_utf8_changelog,
               test_malformed_config_is_not_fatal,
               test_record_scaffolding):

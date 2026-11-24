@@ -112,3 +112,23 @@ Running against real data found three defects that fixtures had not:
    single-entry changelog, of which the corpus has several.
 
 None of these would have surfaced from a handful of hand-written fixtures.
+
+## A second pass found what the first one hid
+
+Re-running the corpus after those fixes confirmed the gains — 11 projects read
+correctly that had not before, no errors — and exposed a separate defect the
+first pass had masked.
+
+File-name matching treated `notes` and `log` as suffixes for the journey
+role, which caught four files that are not journeys: an API reference, a
+platform reference, a set of research notes, and a log for one feature. Four
+of ten journey matches were wrong, and journey is an *adopted* role, so each
+was a file the ledger would have written into.
+
+Match tiers are now set by consequence. Roles that get adopted match strictly;
+roles that only inform a review note may match loosely. All four false
+positives dropped; the one genuine session journal among them was kept.
+
+The general lesson: the first pass validated the scanner against the question
+it was built to answer and missed a defect elsewhere in the same scan.
+Re-running a corpus after a fix is not ceremony.

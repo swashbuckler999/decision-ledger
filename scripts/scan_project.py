@@ -21,15 +21,47 @@ from pathlib import Path
 
 MAX_READ = 400_000  # bytes read from any one file; enough to judge shape
 
+# Two tiers, because matching loosely on an adoptable role is how a ledger
+# ends up appending session narrative into someone's API reference.
+#
+#   strong: may match as the whole stem, a prefix or a suffix
+#   exact:  must be the entire stem
+#
+# Surveying 82 projects found "notes" and "log" as suffixes catching
+# API_NOTES.md, PLATFORM_NOTES.md, 02-research-notes.md and
+# VIDEO_DOWNLOAD_research_log.md -- none of them journeys, all of them files
+# the ledger would then have written into. See ADR-0013.
 ROLE_PATTERNS = {
-    "changelog": ("changelog", "changes", "history", "releases", "release-notes"),
-    "status": ("status", "state", "current", "project-state", "progress"),
-    "journey": ("journey", "diary", "devlog", "log", "notes", "narrative"),
-    "decisions": ("decisions", "adr", "decision-log", "architecture-decisions"),
-    "rejections": ("rejections", "rejected", "not-doing", "declined", "wontfix"),
-    "constraints": ("constraints", "gotchas", "environment", "caveats", "limits"),
-    "plan": ("plan", "roadmap", "todo", "backlog"),
-    "readme": ("readme",),
+    "changelog": {
+        "strong": ("changelog", "change-log", "changes", "release-notes", "releases"),
+        "exact": ("history",),
+    },
+    "status": {
+        "strong": ("status", "project-state"),
+        "exact": ("state", "current", "progress"),
+    },
+    "journey": {
+        "strong": ("journey", "devlog", "dev-log", "worklog", "work-log",
+                   "session-log", "diary", "narrative"),
+        "exact": ("log", "notes"),
+    },
+    "decisions": {
+        "strong": ("decisions", "decision-log", "architecture-decisions"),
+        "exact": ("adr",),
+    },
+    "rejections": {
+        "strong": ("rejections", "rejected", "not-doing"),
+        "exact": ("declined", "wontfix"),
+    },
+    "constraints": {
+        "strong": ("constraints", "gotchas"),
+        "exact": ("caveats", "limits", "environment"),
+    },
+    "plan": {
+        "strong": ("plan", "roadmap"),
+        "exact": ("todo", "backlog"),
+    },
+    "readme": {"strong": (), "exact": ("readme",)},
 }
 
 MEMORY_DIRS = (".ai", "docs/memory", "docs/project-memory", "docs/adr",
@@ -40,10 +72,17 @@ RECORD_RE = re.compile(r"^(ADR|REJ|CR|RFC|DEC)[-_]?(\d+)", re.I)
 
 
 def role_of(path):
-    stem = path.stem.lower().replace("_", "-")
-    for role, names in ROLE_PATTERNS.items():
-        for name in names:
-            if stem == name or stem.startswith(name + "-") or stem.endswith("-" + name):
+    """Classify a file by name, or None. Exact matches win over loose ones."""
+    stem = path.stem.lower().replace("_", "-").strip("-")
+    # Strip a leading sequence number: "02-research-notes" -> "research-notes".
+    stem = re.sub(r"^\d+[-.]", "", stem)
+
+    for role, tiers in ROLE_PATTERNS.items():
+        if stem in tiers["exact"] or stem in tiers["strong"]:
+            return role
+    for role, tiers in ROLE_PATTERNS.items():
+        for name in tiers["strong"]:
+            if stem.startswith(name + "-") or stem.endswith("-" + name):
                 return role
     return None
 

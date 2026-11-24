@@ -23,6 +23,7 @@ What was chosen, and why.
 | [ADR-0010](decisions/ADR-0010-respect-the-changelogs-own-order-and-format.md) | Respect the changelog's own order and format | accepted | 2026-11-24 |
 | [ADR-0011](decisions/ADR-0011-defaults-come-from-the-corpus-not-intuition.md) | Defaults come from the corpus, not intuition | accepted | 2026-11-24 |
 | [ADR-0012](decisions/ADR-0012-the-scan-is-mechanical-the-mapping-is-approved.md) | The scan is mechanical, the mapping is approved | accepted | 2026-11-24 |
+| [ADR-0013](decisions/ADR-0013-match-adoptable-roles-strictly.md) | Match adoptable roles strictly, loose roles loosely | accepted | 2026-11-24 |
 
 
 ## Rejections
