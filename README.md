@@ -66,6 +66,7 @@ docs/project-memory/
 ├── INDEX.md                 # generated map
 ├── CHANGELOG.md             # dated, append-only
 ├── JOURNEY.md               # the narrative, append-only
+├── CONSTRAINTS.md           # environment and access rules, append-only
 ├── decisions/               # ADR-NNNN  what was chosen, and why
 ├── rejections/              # REJ-NNNN  what was turned down, and why
 └── change-requests/         # CR-NNNN   what changed, and the blast radius
@@ -78,6 +79,11 @@ the original reasoning.
 Every record carries the two sections that are usually missing: the **cost**
 accepted, and the **re-evaluation trigger** — the concrete, observable thing
 that would make this the wrong call.
+
+`00-PROJECT-STATE.md` is the **only** mutable file, and nothing is allowed to
+exist solely inside it. Everything else is append-only and is never deleted —
+a superseded decision keeps its file and gains a pointer to the one that
+replaced it.
 
 ---
 

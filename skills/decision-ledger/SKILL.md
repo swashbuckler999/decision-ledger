@@ -90,6 +90,13 @@ Every record, without exception:
   direction or abandons a route — the story, not the bullet
 - Update `docs/project-memory/00-PROJECT-STATE.md` so it still describes reality
 
+Separately from records: when you discover a **constraint** — an access rule, an
+environment limit, a thing that only works one particular way — append it to
+`docs/project-memory/CONSTRAINTS.md`. A constraint is not a decision, because
+nobody chose it, so it fits none of the three record types. It is append-only
+and never deleted; when one stops applying, mark it `LIFTED` with the date
+rather than removing it.
+
 `00-PROJECT-STATE.md` is the only mutable file and it is **capped at 150 lines**.
 It is the cold-start entry point; a state file that grows into a history is a
 state file nobody reads. When it approaches the cap, move detail out into the

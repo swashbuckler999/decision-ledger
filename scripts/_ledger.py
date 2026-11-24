@@ -15,6 +15,7 @@ LEDGER_DIRNAME = Path("docs") / "project-memory"
 STATE_FILE = "00-PROJECT-STATE.md"
 CHANGELOG_FILE = "CHANGELOG.md"
 JOURNEY_FILE = "JOURNEY.md"
+CONSTRAINTS_FILE = "CONSTRAINTS.md"
 SUBDIRS = {"adr": "decisions", "rej": "rejections", "cr": "change-requests"}
 PREFIX = {"adr": "ADR", "rej": "REJ", "cr": "CR"}
 STATE_MAX_LINES = 150

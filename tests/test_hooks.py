@@ -66,6 +66,9 @@ def make_repo(with_ledger=True):
             (lm / sub).mkdir(parents=True, exist_ok=True)
         (lm / "00-PROJECT-STATE.md").write_text(
             "# State\n\nAll good.\n", encoding="utf-8")
+        (lm / "CONSTRAINTS.md").write_text(
+            "# Constraints\n\n## Deploys need the VPN on\n\nDetail here.\n",
+            encoding="utf-8")
         (lm / "rejections" / "REJ-0001-use-mongodb.md").write_text(
             "---\nid: REJ-0001\ntype: rejection\ntitle: Use MongoDB\n"
             "status: rejected\n---\n\n# REJ-0001: Use MongoDB\n", encoding="utf-8")
@@ -92,6 +95,26 @@ def test_session_start():
               (j or {}).get("hookSpecificOutput", {}).get("hookEventName") == "SessionStart")
         check("includes the state file", "All good." in ctx)
         check("surfaces rejections by title", "Use MongoDB" in ctx)
+        check("surfaces constraints by heading", "Deploys need the VPN on" in ctx)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_briefing_without_constraints_file():
+    """A project with no CONSTRAINTS.md must still brief cleanly.
+
+    The file is new, so every ledger created before it exists lacks one. The
+    briefing must omit the section rather than fail or print an empty heading.
+    """
+    print("\nSessionStart - no CONSTRAINTS.md")
+    d = make_repo()
+    try:
+        (d / "docs" / "project-memory" / "CONSTRAINTS.md").unlink()
+        out, _, code = run_hook("session_start.py", {"cwd": str(d)})
+        ctx = context_of(out)
+        check("exits 0", code == 0)
+        check("still briefs", "All good." in ctx)
+        check("omits the empty section", "Constraints in force" not in ctx)
     finally:
         shutil.rmtree(d, ignore_errors=True)
 
@@ -239,7 +262,8 @@ def test_record_scaffolding():
 
 def main():
     print("decision-ledger hook tests")
-    for t in (test_session_start, test_silent_without_ledger, test_pre_compact,
+    for t in (test_session_start, test_briefing_without_constraints_file,
+              test_silent_without_ledger, test_pre_compact,
               test_prompt_classifier, test_stop_gate,
               test_stop_gate_untracked_regression, test_record_scaffolding):
         try:

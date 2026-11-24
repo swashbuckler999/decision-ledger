@@ -18,15 +18,18 @@ have already been tried and have already failed.
    the state from code.
 2. `docs/project-memory/INDEX.md` — the generated map of every record. If it is
    absent or out of date, regenerate it: `python scripts/build_index.py`
-3. **Every file in `docs/project-memory/rejections/`** — titles at minimum, and
+3. **`docs/project-memory/CONSTRAINTS.md`** — the environment and access rules
+   that bind the work. Short, and the cheapest file in the ledger to read: each
+   entry is something that would otherwise cost an hour to rediscover.
+4. **Every file in `docs/project-memory/rejections/`** — titles at minimum, and
    the "Why it was rejected" section of any that touch what you are about to
    work on. This step is not optional and not skippable for speed. Skipping it is
    how a settled argument gets re-opened.
-4. Accepted ADRs relevant to the area you are touching. You do not need all of
+5. Accepted ADRs relevant to the area you are touching. You do not need all of
    them; you do need the ones that bind the files you will edit.
-5. `docs/project-memory/JOURNEY.md` — the last few entries, for narrative and
+6. `docs/project-memory/JOURNEY.md` — the last few entries, for narrative and
    for the user's own recorded words.
-6. `docs/project-memory/CHANGELOG.md` — the last ten lines, for recency.
+7. `docs/project-memory/CHANGELOG.md` — the last ten lines, for recency.
 
 ## Then report back
 

@@ -54,12 +54,10 @@ the user's own words.
 
 ## Constraints
 
-- Public repo under swashbuckler999. Identity: Sayan Majumder
-  <sayan.official@gmail.com>. Pushed 2026-11-24 with explicit approval.
-- **Pushing needs the right gh account active.** Two accounts are authenticated
-  on this machine and `<the account that was active before>` is the usual active one, which has no
-  write access here — a push fails with a 403 naming that account. Run
-  `gh auth switch --user swashbuckler999` first, and switch back afterwards.
-  Putting the username in the remote URL does not work: it bypasses the gh
-  credential helper and git falls back to an interactive password prompt.
-- Must work with no network access and no dependencies beyond Python 3.9+.
+Recorded permanently in **[CONSTRAINTS.md](CONSTRAINTS.md)** — read it before
+pushing or changing the runtime assumptions. In short: pushing needs
+`gh auth switch --user swashbuckler999` first; Python 3.9+ on PATH as `python`
+with no other dependencies; commit identity is repo-local; the repo is public.
+
+This section is a pointer, not the record. Constraints are append-only and do
+not live in this mutable file.

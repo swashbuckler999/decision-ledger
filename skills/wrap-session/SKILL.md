@@ -43,11 +43,29 @@ Where you are reconstructing reasoning from earlier in the session, mark it:
 reconstruction is useful. A reconstruction passed off as a contemporaneous
 record is a trap for the next reader.
 
-### 4. Update the state file
+### 4. Update the state file — move it before you remove it
 
-Rewrite `docs/project-memory/00-PROJECT-STATE.md` so it describes reality now:
-what is done, what is in progress, what is blocked, what is next. Keep it under
-150 lines — move detail into numbered records and leave pointers.
+`docs/project-memory/00-PROJECT-STATE.md` is the only mutable file in the
+ledger, which makes it the only place content can be lost. Before rewriting it,
+check every line you are about to drop:
+
+| What you are removing | Where it must already exist |
+|---|---|
+| A decision or its reasoning | an ADR |
+| An idea that was turned down | a REJ |
+| A scope change | a CR |
+| A constraint, access rule or environment fact | `CONSTRAINTS.md` |
+| An unresolved question still worth asking | keep it, or move it to `JOURNEY.md` |
+| Narrative — what was tried, what was abandoned | `JOURNEY.md` |
+
+If it exists nowhere else, **write it somewhere append-only first**, then
+remove it. Dropping the last copy of something from a mutable file is silent:
+nothing errors, nothing warns, and the loss is only discovered when someone
+rediscovers the fact the hard way.
+
+Then rewrite the file so it describes reality now — what is done, in progress,
+blocked, and next. Keep it under 150 lines by moving detail out into records
+and leaving pointers, never by deleting.
 
 ### 5. Append to the journey
 

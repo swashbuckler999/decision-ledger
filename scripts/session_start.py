@@ -37,6 +37,21 @@ def body():
             "",
         ]
 
+    constraints = d / L.CONSTRAINTS_FILE
+    if constraints.is_file():
+        # One line per constraint: its heading is written to be self-contained.
+        headings = [ln[3:].strip() for ln in L.head(constraints, 300)
+                    if ln.startswith("## ")]
+        if headings:
+            parts += ["## Constraints in force", ""]
+            parts += [f"- {h}" for h in headings]
+            parts += [
+                "",
+                f"Detail in {L.CONSTRAINTS_FILE}. Read it before pushing, "
+                "changing the runtime, or assuming a command will work.",
+                "",
+            ]
+
     rej = L.records("rej", payload)
     parts += ["## Settled rejections -- do not re-propose these", ""]
     if rej:
