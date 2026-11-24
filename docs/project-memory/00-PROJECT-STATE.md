@@ -27,7 +27,7 @@ Working skeleton, not yet exercised in anger.
 - Record scaffolding and index generation scripts — done
 - Smoke tests — done
 - Installed into the Forex ML project — **not yet**
-- Published — **not yet**, local git only, no remote
+- Published — **yes**, https://github.com/swashbuckler999/decision-ledger (public)
 
 ## How it works, in one paragraph
 
@@ -42,8 +42,8 @@ the user's own words.
 
 1. Install into the Forex ML project and run it for a real session
 2. Judge the Stop and UserPromptSubmit hooks on noise — tune or drop
-3. Harden for publication: README, install guide, licence, `claude plugin validate --strict`
-4. Decide on the public repo and push
+3. Consider submitting to Anthropic's plugin directory once it has real use
+   behind it — claude.ai/settings/plugins/submit
 
 ## Open questions
 
@@ -54,6 +54,6 @@ the user's own words.
 
 ## Constraints
 
-- Local git only. Identity: Sayan Majumder <sayan.official@gmail.com>.
-  No remote, nothing pushed, pending an explicit decision.
+- Public repo under swashbuckler999. Identity: Sayan Majumder
+  <sayan.official@gmail.com>. Pushed 2026-11-24 with explicit approval.
 - Must work with no network access and no dependencies beyond Python 3.9+.
