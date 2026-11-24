@@ -1,0 +1,15 @@
+{
+  "name": "sayan-skills",
+  "owner": {
+    "name": "Sayan Majumder",
+    "email": "sayan.official@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "decision-ledger",
+      "source": "./",
+      "description": "Append-only project memory with hook-enforced capture of decisions, rejections and change requests."
+    }
+  ],
+  "description": "Skills and plugins by Sayan Majumder. Project-memory tooling that keeps decisions, rejections and reasoning in the repository so any teammate or agent can cold-start without losing context."
+}

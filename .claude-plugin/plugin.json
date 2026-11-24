@@ -1,0 +1,12 @@
+{
+  "name": "decision-ledger",
+  "displayName": "Decision Ledger",
+  "version": "0.1.0",
+  "description": "Append-only project memory. Records every discussion, decision, rejection, change request and diversion as numbered files in the repo, and enforces it with hooks so a new teammate or a cold Claude account can resume work without losing the reasoning.",
+  "author": {
+    "name": "Sayan Majumder",
+    "email": "sayan.official@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": ["memory", "decisions", "adr", "documentation", "cold-start", "handoff"]
+}

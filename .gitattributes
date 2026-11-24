@@ -1,0 +1,4 @@
+# Published plugin: keep line endings stable across platforms.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
