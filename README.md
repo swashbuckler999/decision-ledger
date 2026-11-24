@@ -95,18 +95,25 @@ Use `--scope project`, not `--scope user`. The hooks are inert in any project
 without a ledger, but an inert hook still starts a Python interpreter — about
 235 ms per turn. Install it where you want it, not everywhere.
 
-Then, in the project you want tracked:
+Then opt the project in by creating the ledger directory:
 
 ```powershell
 mkdir docs\project-memory\decisions, docs\project-memory\rejections, docs\project-memory\change-requests
 ```
 
-The hooks stay completely silent in any project without a
-`docs/project-memory/` directory, so installing globally will not spray files
-into unrelated repositories.
+The hooks stay completely silent in any project without that directory, so
+installing globally will not spray files into unrelated repositories. That also
+means installing is not enough on its own — a project is tracked once the
+directory exists, and not before.
 
-Full details, including publishing from GitHub, are in
-**[docs/INSTALL.md](docs/INSTALL.md)**.
+| You want | Do this |
+|---|---|
+| A new project tracked | Install at project scope, create the directory |
+| An **existing** project tracked | Same, then decide how much history to reconstruct — [guide](docs/INSTALL.md#an-existing-project-mid-flight) |
+| It available in **every** project | Install at `--scope user`; each project still opts in with one `mkdir` — [why](docs/INSTALL.md#system-wide-across-every-project) |
+
+Full instructions, including backfilling an existing project and the trade-offs
+of system-wide installation, are in **[docs/INSTALL.md](docs/INSTALL.md)**.
 
 ---
 

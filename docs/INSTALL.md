@@ -64,9 +64,14 @@ before committing to them.
 
 ---
 
-## Set up a project to be tracked
+## Activating it in a project
 
-The plugin only activates in a project that has a ledger directory. Create one:
+Installing the plugin is not enough on its own. The hooks look for a ledger
+directory and exit silently when there is none, so a project is opted in by
+creating that directory — deliberately, so that installing once does not start
+writing files into every repository you open.
+
+### A new project
 
 ```powershell
 mkdir docs\project-memory\decisions, docs\project-memory\rejections, docs\project-memory\change-requests
@@ -88,6 +93,85 @@ before planning, and scan `rejections/` before proposing anything new.
 That line is a pointer, not the enforcement. The enforcement is the hooks — see
 [REJ-0002](project-memory/rejections/REJ-0002-global-claude-md-mandate-as-enforcement.md)
 for why a CLAUDE.md mandate was rejected as the primary mechanism.
+
+### An existing project, mid-flight
+
+Same four steps, plus one decision about the past. An existing project already
+has decisions behind it; the question is whether to reconstruct them.
+
+**1. Install into the project**
+
+```powershell
+claude plugin install decision-ledger@sayan-skills --scope project
+```
+
+**2. Create the ledger and the state file**
+
+```powershell
+mkdir docs\project-memory\decisions, docs\project-memory\rejections, docs\project-memory\change-requests
+```
+
+Start a session and ask Claude to write `00-PROJECT-STATE.md` from the codebase.
+Insist that it marks what it inferred from the code as inferred. A state file
+that presents guesses as settled fact is worse than no state file, because the
+next session acts on it.
+
+**3. Decide how much history to reconstruct**
+
+Three honest options, in ascending order of effort:
+
+- **Start from today.** The ledger covers decisions from now on. Cheapest, and
+  it still prevents all future loss. Fine for most projects.
+- **Backfill the load-bearing decisions only.** Ask Claude: *"List the
+  architectural choices this codebase has clearly already made, and the ones
+  where you can see an alternative was available."* Record the handful that
+  still constrain the work. Mark each one `Reconstructed from the codebase on
+  <date>; the reasoning is inferred, not contemporaneous.`
+- **Backfill rejections from memory.** The highest-value and most perishable
+  category. Anything you remember trying and abandoning is worth five minutes
+  as a REJ record, because that knowledge exists nowhere else and vanishes when
+  you forget it.
+
+Never let reconstructed reasoning pass as contemporaneous. An honest
+reconstruction is useful; a reconstruction presented as a record of what was
+actually argued will mislead someone later.
+
+**4. Commit the ledger with the project**
+
+```powershell
+git add docs/project-memory && git commit -m "Add project memory ledger"
+```
+
+### System-wide, across every project
+
+```powershell
+claude plugin install decision-ledger@sayan-skills --scope user
+```
+
+This makes the plugin available in **every** project you open — existing ones
+included, not just new ones. What it does not do is activate it everywhere:
+each project still opts in by having a `docs/project-memory/` directory.
+
+That limit is deliberate, and worth being clear about. There is no setting that
+forces every repository to start keeping a ledger, because a plugin that
+creates directories in unrelated projects is a plugin people uninstall in week
+one. Opting in is one `mkdir`.
+
+Two things to weigh before choosing user scope:
+
+- **It costs latency everywhere.** An inert hook still starts a Python
+  interpreter: roughly 106 ms per prompt and 129 ms per turn end, in every
+  project, whether or not it uses the ledger. Across many unrelated
+  repositories that is pure waste.
+- **A global `CLAUDE.md` line helps, but is not enforcement.** Adding the
+  pointer to `~/.claude/CLAUDE.md` makes the convention visible in every
+  session, which is worth doing. It will not make it happen — instruction
+  following degrades in exactly the long sessions where this matters, which is
+  why the hooks exist. See
+  [REJ-0002](project-memory/rejections/REJ-0002-global-claude-md-mandate-as-enforcement.md).
+
+If you want it in a known set of projects rather than all of them, install at
+project scope in each. You pay the latency only where you get the benefit.
 
 ---
 
