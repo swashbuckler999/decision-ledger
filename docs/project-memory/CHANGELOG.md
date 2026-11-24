@@ -48,3 +48,6 @@ carries the reasoning.
 - 2026-11-25 Fourth corpus pass: 82 projects, 0 errors, nothing written - see JOURNEY.md
 - 2026-11-25 Edge-case round three: 7 defects fixed, 31 checks added (231 total)
 - 2026-11-25 README rebuilt with an SVG banner, Mermaid diagram and an agent install path
+- 2026-11-25 **ADR-0026** Install the plugin and drive it from the installed copy - `docs/project-memory/decisions/ADR-0026-install-the-plugin-and-drive-it-from-the-install.md`
+- 2026-11-25 Install trial: registration verified by the harness, hooks driven from the installed copy - see ADR-0026
+- 2026-11-25 Account-wide install made a first-class path in both install guides

@@ -352,3 +352,56 @@ And one unbroken pattern worth naming: **every data-loss bug this project has
 had was silent.** The CRLF rewrite, the index overwriting a hand-written file,
 the changelog dropping an entry while reporting success. Noisy failures get
 fixed by whoever hits them. These would not have been.
+
+## 2026-11-25 — the install trial, and what it could and could not prove
+
+The oldest open question in this project was whether Claude Code actually
+registers what the plugin declares. Everything up to now had run scripts out of
+the working tree, which cannot answer that.
+
+A throwaway project was built outside any real repository, the local repo added
+as a marketplace, the plugin installed at project scope, and the project opted
+in exactly as the install guide says. `claude plugin details` then answered the
+question directly, in the harness's own words: five skills discovered, five
+hooks registered, **658 tokens always-on in every session**. That last number
+had never been measured.
+
+Driving every hook from the *installed* copy, with `${CLAUDE_PLUGIN_ROOT}`
+expanded the way the harness expands it, all five behaved: the briefing came
+back carrying its unique string and the rejection's title, PreCompact emitted
+its preservation instruction, PostToolUse wrote a correctly-relative path into
+the activity trail, UserPromptSubmit caught diversion-shaped phrasing, and Stop
+stayed silent — which was the right answer, since a briefing existed and
+nothing outside the ledger had changed.
+
+The ADR-0024 activity fix was confirmed in a real install rather than a
+fixture: `git check-ignore` shows the trail ignored.
+
+**The model turn did not happen.** The CLI in this environment is routed to a
+third-party model gateway whose key is rejected, so the session died at
+authentication before any hook ran. That is the environment's configuration and
+not the plugin's, and working around it would have meant touching someone
+else's credentials, which is not a thing to do for a convenience.
+
+So the first next step in the briefing — "run it inside one live session" — is
+now two, and the first is done. The claim that remains open is narrow and worth
+stating precisely: whether the harness *calls* these hooks during a real
+session, and whether a skill is ever *chosen* on its own from its
+`when_to_use`. A skill nobody invokes is invisible, and no test in this
+repository can detect that.
+
+### A gap the owner found while this was running
+
+> "Install it — this project only" — There is no instruction for installing the
+> skills for all projects in the AI????
+
+Correct, and it mattered. Account-wide install existed and was documented, but
+in the *agent* path it was a footnote reading "only if the user explicitly
+asked", and in the human path it was a tip below step 4. Someone pasting the
+link and saying "install this for all my projects" would get project scope.
+
+Both paths now present the two scopes side by side at the point of decision,
+the README carries a second ready-to-paste prompt for account-wide, and the
+agent page gained the thing that actually surprises people: installing at user
+scope makes the plugin *available* everywhere and switches it on nowhere, and
+the agent must opt in only the current project and leave the others alone.

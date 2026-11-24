@@ -38,7 +38,9 @@ Working skeleton, not yet exercised in anger.
   install path, `docs/AGENT-INSTALL.md` (ADR-0025)
 - Local machine references redacted from all tracked files (ADR-0021); the
   repository's **history** still contains them
-- Installed into the Forex ML project — **not yet**
+- Installed into a throwaway project and exercised from the installed copy —
+  done; 658 tokens always-on per session (ADR-0026)
+- Installed into a real project — **not yet**
 - Published — **yes**, https://github.com/swashbuckler999/decision-ledger (public)
 
 ## How it works, in one paragraph
@@ -56,9 +58,13 @@ the user's own words.
 
 ## Immediate next steps
 
-1. Run it inside one live Claude Code session. Hook *command strings* are
-   verified end to end; hook *registration* by the harness is not, and no
-   skill has ever been invoked. This is the largest remaining unknown.
+1. Run one interactive session with a working model. Registration is now
+   **verified** — `claude plugin details` reports all five skills and all five
+   hooks, and every hook was driven from the installed copy and behaved
+   (ADR-0026). What is still unproven: that the harness *calls* them during a
+   real session, and that a skill is ever *chosen* on its own from its
+   `when_to_use`. A skill nobody invokes is invisible and no test here can
+   detect it.
 2. Judge the Stop and UserPromptSubmit hooks on noise — tune or drop
 3. Consider submitting to Anthropic's plugin directory once it has real use
    behind it — claude.ai/settings/plugins/submit

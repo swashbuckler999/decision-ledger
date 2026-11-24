@@ -37,26 +37,41 @@ claude plugin marketplace add swashbuckler999/decision-ledger
 
 ---
 
-## 2. Install the plugin
+## 2. Choose the scope, then install
 
-Default — this project only:
+There are two scopes and the user picks, not you. Match what they actually
+said:
 
-```
-claude plugin install decision-ledger@sayan-skills --scope project
-```
-
-Only if the user explicitly asked for it to be available in **every** project on
-the machine:
-
-```
-claude plugin install decision-ledger@sayan-skills --scope user
-```
+| What the user said | Scope | Command |
+|---|---|---|
+| "install it here", "add it to this project", or nothing about scope | **project** | `claude plugin install decision-ledger@sayan-skills --scope project` |
+| "for all my projects", "every project", "machine-wide", "account-wide", "globally", "so I can use it anywhere" | **user** | `claude plugin install decision-ledger@sayan-skills --scope user` |
 
 **Check:** `claude plugin list` includes `decision-ledger`.
 
-**Do not choose `--scope user` on your own.** It starts a Python interpreter on
-every prompt and every turn end in every repository the user opens, including
-ones that will never use the ledger. Project scope is the default for a reason.
+If the user said nothing about scope, use **project** and tell them in one line
+that `--scope user` would make it available everywhere. Do not ask them to
+choose before doing anything — install here, say the other option exists, and
+move on.
+
+**Never pick `--scope user` on your own initiative.** It starts a Python
+interpreter on every prompt and every turn end in *every* repository they open,
+including ones that will never use the ledger.
+
+### If you installed at user scope
+
+Say this to the user, because it surprises people:
+
+> Installed account-wide. It is now available in every project, but it does
+> nothing in a project until that project opts in — one `mkdir`, step 4 below.
+> Until then the hooks are completely silent.
+
+Then do steps 3–7 **for the current project only.** Do not create
+`docs/project-memory/` in the user's other repositories, and do not go looking
+for them. There is deliberately no way to opt every project in at once: a
+plugin that creates directories in projects the user did not ask about is a
+plugin they uninstall. When they want another project tracked, they run step 4
+there.
 
 ---
 

@@ -70,6 +70,8 @@ Paste this into Claude Code — or any coding agent that can run shell commands 
 and it will install and configure everything, including working out which of the
 three situations your project is in:
 
+**For this project only:**
+
 ```text
 Install the Decision Ledger plugin into this project.
 
@@ -78,7 +80,20 @@ Instructions: https://github.com/swashbuckler999/decision-ledger/blob/main/docs/
 
 Read that AGENT-INSTALL.md first and follow it exactly, in order. It is written
 for you: every step has an exact command and a check that proves it worked.
-Use project scope unless I say otherwise. Stop and tell me if a check fails.
+Install at project scope. Stop and tell me if a check fails.
+```
+
+**For every project on this machine:**
+
+```text
+Install the Decision Ledger plugin account-wide, for all my projects.
+
+Repo:         https://github.com/swashbuckler999/decision-ledger
+Instructions: https://github.com/swashbuckler999/decision-ledger/blob/main/docs/AGENT-INSTALL.md
+
+Read that AGENT-INSTALL.md first and follow it exactly, in order. Install at
+user scope, then opt THIS project in and leave my other projects alone — I will
+opt each one in myself. Stop and tell me if a check fails.
 ```
 
 That page is deterministic on purpose — preconditions, exact commands,
@@ -94,10 +109,18 @@ complete the install without guessing. Read it yourself:
 claude plugin marketplace add swashbuckler999/decision-ledger
 ```
 
-**2 · Install it — this project only**
+**2 · Install it** — pick one scope
+
+*This project only:*
 
 ```powershell
 claude plugin install decision-ledger@sayan-skills --scope project
+```
+
+*Or every project on this machine:*
+
+```powershell
+claude plugin install decision-ledger@sayan-skills --scope user
 ```
 
 **3 · Opt the project in** — the hooks stay silent until this exists
@@ -119,15 +142,17 @@ skill to start with — nothing at all, `/ledger-backfill`, or `/ledger-adopt`.
 See [Which skill do I start with?](#which-skill-do-i-start-with)
 
 > [!TIP]
-> **Want it in every project on this machine?** Install with `--scope user`
-> instead of `--scope project`. Each project still opts in with the one `mkdir`
-> in step 3, and until then the hooks are completely silent — a plugin that
-> creates directories in repositories you did not ask about is a plugin
+> **About account-wide (`--scope user`).** It makes the plugin *available*
+> everywhere; it does not switch it on everywhere. Each project still opts in
+> with the one `mkdir` in step 3, and until then the hooks are completely
+> silent. There is deliberately no way to opt every repository in at once — a
+> plugin that creates directories in projects you did not ask about is a plugin
 > uninstalled in week one.
 >
-> The cost: an inert hook still starts a Python interpreter, roughly 106 ms per
-> prompt and 129 ms per turn end, in **every** repository you open. Full
-> trade-offs in [docs/INSTALL.md](docs/INSTALL.md).
+> The cost of choosing it: an inert hook still starts a Python interpreter,
+> roughly 106 ms per prompt and 129 ms per turn end, in **every** repository
+> you open, including ones that will never use the ledger. Full trade-offs in
+> [docs/INSTALL.md](docs/INSTALL.md).
 
 ---
 

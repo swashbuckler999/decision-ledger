@@ -36,6 +36,7 @@ What was chosen, and why.
 | [ADR-0023](decisions/ADR-0023-serialise-ledger-writes-with-a-lock-file.md) | Serialise ledger writes with a lock file | accepted | 2026-11-25 |
 | [ADR-0024](decisions/ADR-0024-harden-reads-and-writes-against-hand-written-inp.md) | Harden reads and writes against hand-written input | accepted | 2026-11-25 |
 | [ADR-0025](decisions/ADR-0025-a-deterministic-install-page-written-for-agents.md) | A deterministic install page written for agents | accepted | 2026-11-25 |
+| [ADR-0026](decisions/ADR-0026-install-the-plugin-and-drive-it-from-the-install.md) | Install the plugin and drive it from the installed copy | accepted | 2026-11-25 |
 
 
 ## Rejections
