@@ -192,3 +192,28 @@ format string was destroyed by the call parsing it.
 The CRLF bug showed that git's own normalisation can hide a defect in review.
 This is the quieter version: a code path that returns nothing across all
 available real data is untested, not working.
+
+## A fourth pass: what the corpus says about environments
+
+The third pass simulated the three *situations* the owner named. This one asked
+a different question — what environment has the plugin never run in — and the
+corpus answered one of them directly.
+
+**One project is a linked git worktree.** Its `.git` is a file, not a
+directory, so every `is_dir()` test in the plugin read it as having no version
+control at all. The survey had been reporting it that way too: **39 git
+repositories under the old test, 40 under the new one.** The miscount was in
+every earlier pass in this document.
+
+That single project is worth more than its share, because Claude Code's own
+desktop sessions run in worktrees. The environment the plugin is most likely to
+be installed into was the one it handled worst: the scanner called the
+repository unversioned, the history miner found none of its commits, and the
+Stop hook could not write its de-duplication marker, so it repeated the same
+reminder every turn.
+
+The pattern is now familiar enough to state as a rule. Every defect this
+project has shipped was found by running against something real — 82 projects,
+a worktree, a repository with a deletion in it, a config pointing somewhere
+unusual — and none by writing a fixture and reading the code against it. A
+fixture tests the author's model of the world. The corpus tests the world.

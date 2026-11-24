@@ -12,6 +12,7 @@ stayed quiet.
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -994,6 +995,262 @@ def test_fresh_project_is_not_told_to_backfill():
     finally:
         shutil.rmtree(d, ignore_errors=True)
 
+def test_worktree_is_recognised_as_git():
+    """A linked worktree has `.git` as a FILE, not a directory.
+
+    `(root/'.git').is_dir()` was false there, so the scanner reported "not a
+    git repository", the miner reported zero commits, and a project with
+    months of history read as greenfield. Claude Code's own desktop sessions
+    run in worktrees, so this was a default environment, not an exotic one.
+    """
+    print("\nGit worktrees")
+    d = make_repo(with_ledger=False)
+    holder = Path(tempfile.mkdtemp(prefix="ledger-wt-"))
+    wt = holder / "linked"
+    try:
+        (d / "README.md").write_text("# p\n", encoding="utf-8")
+        commit_all(d, "initial: add readme")
+        for i in range(5):
+            (d / "app.py").write_text(f"x{i}\n", encoding="utf-8")
+            commit_all(d, "switch to parquet because load dropped from 40s to 2s")
+        subprocess.run(["git", "worktree", "add", "-q", str(wt), "-b", "wtbranch"],
+                       cwd=d, check=True, capture_output=True)
+        check(".git is a file in the worktree", (wt / ".git").is_file())
+        sys.path.insert(0, str(SCRIPTS))
+        import _ledger as L
+        import mine_history
+        check("is_git_repo sees the worktree", L.is_git_repo(wt))
+        gd = L.git_dir(wt)
+        check("git_dir resolves the real git dir", gd is not None and gd.exists())
+        info = mine_history.scan(wt)
+        check("miner finds the history",
+              info["is_git"] and info["total_commits"] == 6,
+              f"is_git={info['is_git']} commits={info['total_commits']}")
+        out = subprocess.run([sys.executable, str(SCRIPTS / "scan_project.py"), str(wt)],
+                             capture_output=True, text=True, timeout=60)
+        check("scanner reports is_git", json.loads(out.stdout)["is_git"])
+    finally:
+        subprocess.run(["git", "worktree", "remove", "--force", str(wt)],
+                       cwd=d, capture_output=True)
+        shutil.rmtree(d, ignore_errors=True)
+        shutil.rmtree(holder, ignore_errors=True)
+
+
+def test_stop_gate_dedup_works_in_a_worktree():
+    """The de-dup marker lived in cwd/.git, which is a file in a worktree.
+
+    mkdir raised, the marker was never written, and the Stop hook repeated the
+    identical reminder on every single turn -- the exact behaviour that trains
+    someone to uninstall the plugin.
+    """
+    print("\nStop gate de-duplication in a worktree")
+    d = make_repo(with_ledger=False)
+    holder = Path(tempfile.mkdtemp(prefix="ledger-wt2-"))
+    wt = holder / "linked"
+    try:
+        (d / "README.md").write_text("# p\n", encoding="utf-8")
+        commit_all(d, "init")
+        subprocess.run(["git", "worktree", "add", "-q", str(wt), "-b", "wt2branch"],
+                       cwd=d, check=True, capture_output=True)
+        (wt / "docs" / "project-memory").mkdir(parents=True, exist_ok=True)
+        (wt / "newcode.py").write_text("x\n", encoding="utf-8")
+        seen = []
+        for _ in range(3):
+            out, _e, _c = run_hook("stop_gate.py", {"cwd": str(wt),
+                                                    "hook_event_name": "Stop"})
+            seen.append(bool(out.strip()))
+        check("warns the first time", seen[0] is True, str(seen))
+        check("stays quiet afterwards", seen[1:] == [False, False], str(seen))
+    finally:
+        subprocess.run(["git", "worktree", "remove", "--force", str(wt)],
+                       cwd=d, capture_output=True)
+        shutil.rmtree(d, ignore_errors=True)
+        shutil.rmtree(holder, ignore_errors=True)
+
+
+def test_miner_summary_survives_a_non_git_path():
+    """`--summary` died with KeyError: 'first_commit' on any non-git path.
+
+    The early return built a dict with fewer keys than the normal one. The
+    backfill skill's first instruction is to run exactly this command, so the
+    crash sat on the entry point of the feature.
+    """
+    print("\nMiner on a path with no history")
+    d = Path(tempfile.mkdtemp(prefix="ledger-nogit-"))
+    try:
+        out = subprocess.run([sys.executable, str(SCRIPTS / "mine_history.py"),
+                              str(d), "--summary"], capture_output=True,
+                             text=True, timeout=60)
+        check("exits 0", out.returncode == 0, out.stderr[-200:])
+        check("says there is no repository", "not a git repository" in out.stdout)
+        sys.path.insert(0, str(SCRIPTS))
+        import mine_history
+        expected = set(mine_history.EMPTY)
+        got = set(mine_history.scan(d))
+        check("same keys as a real scan", expected <= got, f"missing {expected - got}")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_index_writes_to_the_configured_path():
+    """build_index checked the marker on the configured path and then wrote to
+    the default one, destroying a hand-written INDEX.md that sat there.
+
+    The guard was looking at a different file from the one being written,
+    which is worse than no guard: it reported success.
+    """
+    print("\nIndex honours a configured path")
+    d = make_repo(with_ledger=False)
+    try:
+        (d / "docs" / "adr").mkdir(parents=True)
+        (d / "docs" / "adr" / "0001-router.md").write_text(
+            "---\nid: 0001\ntitle: Router\n---\n# Router\n", encoding="utf-8")
+        (d / "docs" / "project-memory").mkdir(parents=True)
+        precious = d / "docs" / "project-memory" / "INDEX.md"
+        precious.write_text("# Hand-written index\n\nYears of work.\n",
+                            encoding="utf-8")
+        (d / ".ledger.json").write_text(json.dumps({
+            "paths": {"index": "docs/adr/INDEX.md", "decisions": "docs/adr"},
+            "adopted": ["decisions"]}), encoding="utf-8")
+        out = subprocess.run([sys.executable, str(SCRIPTS / "build_index.py")],
+                             capture_output=True, text=True, timeout=60,
+                             env=dict(os.environ, LEDGER_PROJECT_DIR=str(d)))
+        check("exits 0", out.returncode == 0, out.stderr[-200:])
+        check("writes the configured index",
+              (d / "docs" / "adr" / "INDEX.md").is_file())
+        check("leaves the hand-written file alone",
+              precious.read_text(encoding="utf-8").startswith("# Hand-written"))
+        check("reports the file it actually wrote",
+              "adr" in out.stdout and out.stdout.strip().endswith("INDEX.md"),
+              out.stdout)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_configured_paths_cannot_leave_the_project():
+    """`paths` is hand-editable and `root / "C:/x"` discards the root entirely.
+
+    An absolute or `../` override pointed the ledger outside the repository it
+    was installed in. Rejected in favour of the default; legitimate relative
+    overrides are untouched.
+    """
+    print("\nConfigured paths stay inside the project")
+    d = Path(tempfile.mkdtemp(prefix="ledger-esc-"))
+    try:
+        sys.path.insert(0, str(SCRIPTS))
+        import _ledger as L
+        payload = {"cwd": str(d)}
+        for bad in ("../../outside/CHANGELOG.md", "/etc/passwd", "C:/Windows/evil.md"):
+            (d / ".ledger.json").write_text(
+                json.dumps({"paths": {"changelog": bad}}), encoding="utf-8")
+            got = L.path_for("changelog", payload)
+            check(f"rejects {bad}", str(got).startswith(str(d)), str(got))
+        (d / ".ledger.json").write_text(
+            json.dumps({"paths": {"changelog": "notes/CHANGELOG.md"}}),
+            encoding="utf-8")
+        check("keeps a legitimate override",
+              L.path_for("changelog", payload) == d / "notes" / "CHANGELOG.md")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_config_of_the_wrong_shape_is_not_fatal():
+    """Valid JSON of the wrong type crashed inside the hooks.
+
+    `"paths": "docs"` raised AttributeError on the next `.get`, and
+    `"changelog_order": true` on `.lower()`. The contract is that a bad config
+    reads as absent, which has to cover the shape as well as the syntax.
+    `"adopted": "decisions"` was worse than a crash: it substring-matched, so
+    unrelated keys came back adopted.
+    """
+    print("\nConfig of the wrong shape")
+    d = Path(tempfile.mkdtemp(prefix="ledger-shape-"))
+    try:
+        sys.path.insert(0, str(SCRIPTS))
+        import _ledger as L
+        payload = {"cwd": str(d)}
+        bad_shapes = [{"paths": "docs"}, {"adopted": "decisions"},
+                      {"changelog_order": True}, {"record_names": 5},
+                      {"adopted": {"a": 1}}, {"paths": {"changelog": None}}]
+        crashes = []
+        for cfg in bad_shapes:
+            (d / ".ledger.json").write_text(json.dumps(cfg), encoding="utf-8")
+            calls = (lambda: L.path_for("changelog", payload),
+                     lambda: L.is_adopted("decisions", payload),
+                     lambda: L.record_name_style("adr", payload),
+                     lambda: L.ledger_paths(payload),
+                     lambda: L.rel_path("briefing", payload))
+            for call in calls:
+                try:
+                    call()
+                except Exception as exc:
+                    crashes.append(f"{cfg}: {type(exc).__name__}")
+        check("nothing crashes", not crashes, "; ".join(crashes[:3]))
+        (d / ".ledger.json").write_text(
+            json.dumps({"adopted": "decisions-and-more"}), encoding="utf-8")
+        check("a string never substring-matches as adopted",
+              not L.is_adopted("decisions", payload))
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_session_start_caps_what_it_injects():
+    """Rejections were capped at 40; decisions and change requests were not.
+
+    A long-lived project injected one line per accepted ADR into the start of
+    every session, crowding out the briefing -- which is the part that
+    actually orients a cold start.
+    """
+    print("\nSessionStart stays bounded")
+    d = make_repo()
+    try:
+        # Read the constant out of the source rather than importing it: the
+        # hook scripts call L.guard(body) at module level, so importing one
+        # runs the hook and then sys.exit()s, which takes the test run with it.
+        src = (SCRIPTS / "session_start.py").read_text(encoding="utf-8")
+        cap = int(re.search(r"^MAX_DECISIONS = (\d+)", src, re.M).group(1))
+        folder = d / "docs" / "project-memory" / "decisions"
+        total = cap + 25
+        for i in range(1, total + 1):
+            (folder / f"ADR-{i:04d}-decision.md").write_text(
+                f"---\nid: ADR-{i:04d}\ntitle: Decision {i}\nstatus: accepted\n"
+                f"---\n\n# ADR-{i:04d}: Decision {i}\n", encoding="utf-8")
+        out, _e, _c = run_hook("session_start.py",
+                               {"cwd": str(d), "hook_event_name": "SessionStart"})
+        ctx = context_of(out)
+        listed = sum(1 for ln in ctx.splitlines() if ln.startswith("- **ADR-"))
+        check("caps the decision list", listed == cap, f"listed {listed}")
+        check("says how many were withheld", f"{total - cap} older" in ctx)
+        check("keeps the newest", f"**ADR-{total:04d}**" in ctx)
+        check("drops the oldest", "**ADR-0001**" not in ctx)
+        check("still includes the briefing", "All good." in ctx)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_messages_name_the_projects_own_files():
+    """Hook messages printed the default filenames even at a project that
+    adopted different ones, sending the reader to a file that does not exist.
+    """
+    print("\nMessages name the configured files")
+    d = make_repo(with_ledger=False)
+    try:
+        (d / "docs").mkdir()
+        (d / ".ledger.json").write_text(json.dumps({
+            "paths": {"briefing": "docs/STATUS.md",
+                      "constraints": "docs/GOTCHAS.md"}}), encoding="utf-8")
+        (d / "docs" / "GOTCHAS.md").write_text(
+            "# Gotchas\n\n## Deploys need the VPN on\n", encoding="utf-8")
+        out, _e, _c = run_hook("session_start.py",
+                               {"cwd": str(d), "hook_event_name": "SessionStart"})
+        ctx = context_of(out)
+        check("names the adopted briefing", "docs/STATUS.md" in ctx, ctx[:200])
+        check("does not name our default", "00-PROJECT-STATE.md" not in ctx)
+        check("names the adopted constraints file", "docs/GOTCHAS.md" in ctx)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def main():
     print("decision-ledger hook tests")
     for t in (test_session_start, test_briefing_without_constraints_file,
@@ -1015,7 +1272,15 @@ def main():
               test_missing_briefing_warning,
               test_history_mining,
               test_scanner_flags_undocumented_history,
-              test_fresh_project_is_not_told_to_backfill):
+              test_fresh_project_is_not_told_to_backfill,
+              test_worktree_is_recognised_as_git,
+              test_stop_gate_dedup_works_in_a_worktree,
+              test_miner_summary_survives_a_non_git_path,
+              test_index_writes_to_the_configured_path,
+              test_configured_paths_cannot_leave_the_project,
+              test_config_of_the_wrong_shape_is_not_fatal,
+              test_session_start_caps_what_it_injects,
+              test_messages_name_the_projects_own_files):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test

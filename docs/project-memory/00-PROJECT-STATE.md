@@ -1,6 +1,6 @@
 # Project state
 
-**Updated:** 2026-11-24
+**Updated:** 2026-11-25
 
 Read this first. It is capped at 150 lines on purpose: it is the briefing, not
 the history. Detail lives in the numbered records; see `INDEX.md` for the map.
@@ -26,9 +26,11 @@ Working skeleton, not yet exercised in anger.
   `ledger-adopt`, `ledger-backfill` — done
 - Five hooks: SessionStart, PreCompact, PostToolUse, Stop, UserPromptSubmit — done
 - Record scaffolding and index generation scripts — done
-- Tests — 172 checks, dependency-free, `python tests/test_hooks.py`
+- Tests — 200 checks, dependency-free, `python tests/test_hooks.py`
 - The three adoption situations (fresh / undocumented / documented) —
   simulated against sandbox copies, all three now handled
+- The three environments (worktree / no git / unusual config) — covered after
+  an edge-case pass found eight defects, two of which lost data (ADR-0018..0020)
 - Installed into the Forex ML project — **not yet**
 - Published — **yes**, https://github.com/swashbuckler999/decision-ledger (public)
 
@@ -61,6 +63,9 @@ the user's own words.
 - Are the mining weights in ADR-0016 too parochial? They are tuned on one
   developer's 82 projects, the same concern already noted against ADR-0011.
 - Is `python` on PATH a safe assumption for installers on Windows?
+- What other environment has this never run in? The last pass found every bug
+  by asking that rather than by reading code. macOS and Linux are still
+  untested, `python` vs `python3` included.
 - Should `00-PROJECT-STATE.md` be generated from the records rather than
   maintained by hand? Currently hand-maintained — see ADR-0005.
 

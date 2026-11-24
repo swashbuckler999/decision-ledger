@@ -61,12 +61,12 @@ def committed_version(path, cwd):
     return out.stdout if out.returncode == 0 else None
 
 
-def ledger_corpus(exclude):
+def ledger_corpus(exclude, payload=None):
     """Every line of every other ledger file, wherever they are configured."""
     roots = []
     for key in ("changelog", "journey", "constraints", "decisions",
                 "rejections", "change_requests"):
-        roots.append(L.path_for(key))
+        roots.append(L.path_for(key, payload))
     lines = []
     seen = set()
     for root in roots:
@@ -97,13 +97,16 @@ def is_preserved(removed, corpus_sets):
     return False
 
 
-def find_orphans(cwd=None):
+def find_orphans(cwd=None, payload=None):
     """Lines dropped from the state file that exist nowhere else in the ledger.
 
     Returns (orphans, reason_if_not_checked).
     """
-    cwd = Path(cwd) if cwd else L.project_dir()
-    state = L.path_for("briefing")
+    # The payload matters: the Stop hook resolved git against the hook's cwd
+    # but the briefing against the process cwd, so a mismatch compared the
+    # wrong file against the right history.
+    cwd = Path(cwd) if cwd else L.project_dir(payload)
+    state = L.path_for("briefing", payload)
     if not state.is_file():
         return [], "no briefing file"
 
@@ -119,7 +122,7 @@ def find_orphans(cwd=None):
     if not removed:
         return [], None
 
-    corpus_sets = [content_words(line) for line in ledger_corpus(state)]
+    corpus_sets = [content_words(line) for line in ledger_corpus(state, payload)]
     corpus_sets += [content_words(line) for line in current]
 
     return [line for line in removed if not is_preserved(line, corpus_sets)], None
@@ -140,17 +143,17 @@ def main():
         return 0
 
     if not quiet:
-        print(f"{len(orphans)} line(s) removed from {L.STATE_FILE} with no copy "
+        print(f"{len(orphans)} line(s) removed from {L.rel_path("briefing")} with no copy "
               "elsewhere in the ledger:\n")
         for line in orphans:
             print(f"  {line}")
         print("\nIf any of that still matters, write it somewhere append-only "
               "before it is lost:")
-        print(f"  a constraint or access rule -> {L.CONSTRAINTS_FILE}")
+        print(f"  a constraint or access rule -> {L.rel_path("constraints")}")
         print("  a decision, rejection or scope change -> a numbered record")
-        print(f"  narrative, or an open question worth keeping -> {L.JOURNEY_FILE}")
+        print(f"  narrative, or an open question worth keeping -> {L.rel_path("journey")}")
         print("\nThe previous version is still in git: "
-              f"git show HEAD:{L.LEDGER_DIRNAME.as_posix()}/{L.STATE_FILE}")
+              f'git show HEAD:{L.rel_path("briefing")}')
     return 1
 
 

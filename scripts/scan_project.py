@@ -247,7 +247,7 @@ def scan(root):
     root = Path(root)
     out = {
         "project": root.name,
-        "is_git": (root / ".git").is_dir(),
+        "is_git": L.is_git_repo(root),
         "files": {},
         "memory_dirs": [],
         "has_ledger_config": (root / ".ledger.json").is_file(),

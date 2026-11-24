@@ -28,6 +28,9 @@ What was chosen, and why.
 | [ADR-0015](decisions/ADR-0015-reconstruct-a-ledger-from-git-history.md) | Reconstruct a ledger from git history | accepted | 2026-11-24 |
 | [ADR-0016](decisions/ADR-0016-score-mined-commits-and-cap-the-worklist.md) | Score mined commits and cap the worklist | accepted | 2026-11-24 |
 | [ADR-0017](decisions/ADR-0017-warn-when-records-exist-with-no-briefing.md) | Warn when records exist with no briefing | accepted | 2026-11-24 |
+| [ADR-0018](decisions/ADR-0018-recognise-worktrees-and-submodules-as-git.md) | Recognise worktrees and submodules as git | accepted | 2026-11-25 |
+| [ADR-0019](decisions/ADR-0019-write-the-index-to-its-configured-path.md) | Write the index to its configured path | accepted | 2026-11-25 |
+| [ADR-0020](decisions/ADR-0020-treat-a-config-of-the-wrong-shape-as-absent.md) | Treat a config of the wrong shape as absent | accepted | 2026-11-25 |
 
 
 ## Rejections

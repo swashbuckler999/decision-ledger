@@ -13,6 +13,12 @@ import _ledger as L  # noqa: E402
 
 MAX_STATE_LINES = 160
 MAX_REJECTIONS = 40
+# Decisions and change requests are capped for the same reason rejections are.
+# Uncapped, a project with 300 accepted ADRs injected 300 lines into the start
+# of every session, crowding out the briefing -- which is the part that
+# actually orients a cold start.
+MAX_DECISIONS = 60
+MAX_CHANGE_REQUESTS = 25
 
 
 def body():
@@ -31,7 +37,7 @@ def body():
         parts += [
             "## Current state",
             "",
-            f"No {L.STATE_FILE} exists yet. Do not infer the state from the code "
+            f"No {L.rel_path('briefing', payload)} exists yet. Do not infer the state from the code "
             "and present it as fact -- say it is missing and offer to create it.",
             "",
         ]
@@ -46,7 +52,7 @@ def body():
             parts += [f"- {h}" for h in headings]
             parts += [
                 "",
-                f"Detail in {L.CONSTRAINTS_FILE}. Read it before pushing, "
+                f"Detail in {L.rel_path('constraints', payload)}. Read it before pushing, "
                 "changing the runtime, or assuming a command will work.",
                 "",
             ]
@@ -58,7 +64,7 @@ def body():
             fm = L.frontmatter(p)
             parts.append(f"- **{fm.get('id', p.stem)}** {L.title_of(p)}")
         if len(rej) > MAX_REJECTIONS:
-            parts.append(f"- ...and {len(rej) - MAX_REJECTIONS} more in {L.SUBDIRS['rej']}/")
+            parts.append(f"- ...and {len(rej) - MAX_REJECTIONS} more in {L.rel_path('rejections', payload)}/")
         parts += [
             "",
             "Before proposing a library, pattern or approach, check this list. "
@@ -74,9 +80,13 @@ def body():
            if L.frontmatter(p).get("status", "accepted") != "superseded"]
     parts += ["## Accepted decisions in force", ""]
     if adr:
-        for p in adr:
+        # Newest first, so what is cut is the oldest rather than the current.
+        for p in sorted(adr, reverse=True)[:MAX_DECISIONS]:
             fm = L.frontmatter(p)
             parts.append(f"- **{fm.get('id', p.stem)}** {L.title_of(p)}")
+        if len(adr) > MAX_DECISIONS:
+            parts.append(f"- ...and {len(adr) - MAX_DECISIONS} older decisions; "
+                         f"the full list is in {L.path_for('index', payload).name}.")
     else:
         parts.append("_None recorded yet._")
     parts.append("")
@@ -85,9 +95,11 @@ def body():
                if L.frontmatter(p).get("status") in ("open", "accepted")]
     if openish:
         parts += ["## Open change requests", ""]
-        for p in openish:
+        for p in sorted(openish, reverse=True)[:MAX_CHANGE_REQUESTS]:
             fm = L.frontmatter(p)
             parts.append(f"- **{fm.get('id', p.stem)}** {L.title_of(p)} ({fm.get('status')})")
+        if len(openish) > MAX_CHANGE_REQUESTS:
+            parts.append(f"- ...and {len(openish) - MAX_CHANGE_REQUESTS} more open.")
         parts.append("")
 
     journey = L.path_for("journey", payload)

@@ -82,11 +82,59 @@ def config(payload=None):
         return {}
 
 
+def _mapping(payload, key):
+    """A config value that must be a dict, or {} if it is anything else.
+
+    `config()` already survives invalid JSON, but valid JSON of the wrong
+    shape got through: `"paths": "docs"` raised AttributeError on the next
+    `.get`, inside a hook, for every call in the session. The promise is that
+    a bad config reads as absent, and that has to cover the shape too.
+    """
+    value = config(payload).get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def _choice(payload, key, default):
+    """A config value that must be a string, lowercased, or the default."""
+    value = config(payload).get(key)
+    return value.lower() if isinstance(value, str) and value else default
+
+
 def path_for(key, payload=None):
-    """Absolute path for a ledger key, honouring .ledger.json overrides."""
-    paths = config(payload).get("paths") or {}
-    rel = paths.get(key) or DEFAULTS[key]
-    return project_dir(payload) / rel
+    """Absolute path for a ledger key, honouring .ledger.json overrides.
+
+    An override that leaves the project is ignored and the default is used.
+    `paths` is hand-editable, and `Path(root) / "C:/Windows/x"` discards the
+    root entirely while `../..` walks out of it -- either way the ledger
+    would be writing outside the repository it was installed in. Nothing the
+    scanner proposes is ever absolute, so rejecting those costs nothing.
+    """
+    root = project_dir(payload)
+    rel = _mapping(payload, "paths").get(key)
+    if isinstance(rel, str) and rel:
+        candidate = root / rel
+        try:
+            inside = candidate.resolve().is_relative_to(root.resolve())
+        except Exception:
+            inside = False
+        if inside:
+            return candidate
+    return root / DEFAULTS[key]
+
+
+def rel_path(key, payload=None):
+    """Project-relative configured path, for use in messages.
+
+    Every instruction the hooks print has to name the file this project
+    actually keeps. Printing the default name at a project that adopted
+    `STATUS.md` sends the reader to a file that does not exist, which is the
+    adoption promise broken in the one place the user reads.
+    """
+    root = project_dir(payload)
+    try:
+        return path_for(key, payload).relative_to(root).as_posix()
+    except Exception:
+        return DEFAULTS[key]
 
 
 def is_adopted(key, payload=None):
@@ -94,8 +142,12 @@ def is_adopted(key, payload=None):
 
     Adopted files are appended to in whatever style is already there, and are
     never rewritten, reordered or reformatted.
+
+    The list must really be a list: `"adopted": "decisions"` would otherwise
+    substring-match, so `is_adopted("decision")` came back true as well.
     """
-    return key in (config(payload).get("adopted") or [])
+    adopted = config(payload).get("adopted")
+    return isinstance(adopted, list) and key in adopted
 
 
 def ledger_dir(payload=None):
@@ -120,10 +172,17 @@ def ledger_paths(payload=None):
 
     Used to tell ledger edits apart from code edits.
     """
-    paths = config(payload).get("paths") or {}
+    root = project_dir(payload)
     out = []
-    for key, default in DEFAULTS.items():
-        out.append(Path(paths.get(key) or default).as_posix())
+    for key in DEFAULTS:
+        # Via path_for so a rejected override cannot make a ledger file look
+        # like code (which would fire the unrecorded-change nag on our own
+        # writes) or make code look like a ledger file (which would silence
+        # it for real work).
+        try:
+            out.append(path_for(key, payload).relative_to(root).as_posix())
+        except Exception:
+            out.append(Path(DEFAULTS[key]).as_posix())
     return out
 
 
@@ -134,6 +193,50 @@ def is_ledger_path(rel_path, payload=None):
         if rel == known or rel.startswith(known.rstrip("/") + "/"):
             return True
     return False
+
+
+_GIT_DIR_CACHE = {}
+
+
+def is_git_repo(root):
+    """True for a normal checkout, a worktree, or a submodule.
+
+    `.git` is a *directory* only in a primary checkout. In a linked worktree
+    and in a submodule it is a plain file holding `gitdir: <path>`, so
+    `.is_dir()` is false and every caller concluded the project had no
+    version control at all: the scanner reported "not a git repository", the
+    miner returned zero commits, and a worked-on project read as greenfield.
+
+    Claude Code's own desktop sessions run in worktrees, which is where this
+    was found.
+    """
+    return (Path(root) / ".git").exists()
+
+
+def git_dir(root):
+    """The real git directory for `root`, or None.
+
+    Asked of git rather than assumed, because in a worktree the per-worktree
+    git directory lives under the primary repository's `.git/worktrees/<name>`
+    and `root/.git` is a file. Anything writing state next to the repository
+    has to go here, or it silently fails -- which is what broke the Stop
+    hook's de-duplication, leaving it to repeat the same reminder every turn.
+    """
+    import subprocess
+    key = str(root)
+    if key in _GIT_DIR_CACHE:  # three callers per Stop hook; one subprocess
+        return _GIT_DIR_CACHE[key]
+    _GIT_DIR_CACHE[key] = None
+    try:
+        out = subprocess.run(["git", "rev-parse", "--absolute-git-dir"],
+                             cwd=str(root), capture_output=True, text=True,
+                             encoding="utf-8", errors="replace", timeout=10)
+    except Exception:
+        return None
+    if out.returncode != 0 or not out.stdout.strip():
+        return None
+    _GIT_DIR_CACHE[key] = Path(out.stdout.strip())
+    return _GIT_DIR_CACHE[key]
 
 
 def today():
@@ -192,7 +295,7 @@ def record_name_style(kind=None, payload=None):
     own folders keep the prefixed names regardless: matching a convention is
     for fitting into someone else's directory, not for restyling ours.
     """
-    style = (config(payload).get("record_names") or "prefixed").lower()
+    style = _choice(payload, "record_names", "prefixed")
     if style != "bare":
         return "prefixed"
     if kind is not None and not is_adopted(KIND_KEY[kind], payload):
@@ -319,7 +422,7 @@ def add_changelog_entry(text, payload=None):
     # every line in it, and git's normalisation hides that in review.
     eol = dominant_newline(original)
     block = _as_newline(block, eol)
-    order = (config(payload).get("changelog_order") or DEFAULT_ORDER).lower()
+    order = _choice(payload, "changelog_order", DEFAULT_ORDER)
     tail_sep = "" if original.endswith(("\n", "\r")) else eol
 
     if order != "newest-first":

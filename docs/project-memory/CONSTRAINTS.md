@@ -157,3 +157,22 @@ repository with a deletion in it.
 `add_changelog_entry` uses `splitlines(keepends=True)` and is safe, because it
 verifies `before + after == original` before writing and `keepends` preserves
 whatever it split on.
+
+## 2026-11-25: `.git` is a file in a worktree and in a submodule
+
+`(root / ".git").is_dir()` is **false** in a linked git worktree and in a
+submodule. `.git` there is a plain file holding `gitdir: <path>`, pointing at
+the real git directory — for a worktree, `<primary>/.git/worktrees/<name>`.
+
+Any test for "is this a git repository" must use `.exists()`, and anything
+that needs the git directory itself must ask
+`git rev-parse --absolute-git-dir` rather than assume `root/.git`. Writing
+state to `root/.git/<file>` fails outright there, because the parent is a file.
+
+This mattered three times over: the scanner declared a repository unversioned,
+the history miner found no commits in it, and the Stop hook's de-duplication
+marker could not be written, so the same reminder repeated every turn.
+
+Claude Code's own desktop sessions run in worktrees, so this is a common
+environment and not an edge of the map. One project in the corpus is a linked
+worktree as well, and the survey had been counting it as unversioned.

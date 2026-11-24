@@ -189,12 +189,20 @@ def deleted_paths(root):
     return out
 
 
+EMPTY = {"is_git": False, "total_commits": 0, "commits_with_body": 0,
+         "body_informative": False, "matched": 0, "limit": DEFAULT_LIMIT,
+         "first_commit": None, "last_commit": None, "candidates": [],
+         "deleted": []}
+
+
 def scan(root, limit=DEFAULT_LIMIT):
     root = Path(root)
-    if not (root / ".git").is_dir():
-        return {"project": root.name, "is_git": False, "candidates": [],
-                "deleted": [], "total_commits": 0, "matched": 0,
-                "body_informative": False}
+    # `.git` is a file in a worktree and in a submodule, so `.is_dir()` read
+    # those as having no history at all -- and the result had fewer keys than
+    # the normal one, so `--summary` then died on KeyError: 'first_commit'.
+    # Same keys either way now.
+    if not (Path(root) / ".git").exists():
+        return {**EMPTY, "project": root.name, "limit": limit}
     all_commits = commits(root)
     with_body = sum(1 for c in all_commits if c["body"])
     # Decided per repository: see classify().
@@ -225,6 +233,12 @@ def scan(root, limit=DEFAULT_LIMIT):
 
 
 def summary(info):
+    if not info.get("is_git"):
+        return (f"{info['project']}: not a git repository (no .git here). "
+                "There is no history to mine, so the ledger starts from now.")
+    if not info["total_commits"]:
+        return (f"{info['project']}: a git repository with no commits yet. "
+                "Nothing to reconstruct -- this really is greenfield.")
     shown, matched = len(info["candidates"]), info.get("matched", 0)
     lines = [
         f"{info['project']}: {info['total_commits']} commits"
@@ -269,7 +283,10 @@ def main():
     limit = DEFAULT_LIMIT
     for a in sys.argv[1:]:
         if a.startswith("--limit="):
-            limit = int(a.split("=", 1)[1])
+            try:
+                limit = max(1, int(a.split("=", 1)[1]))
+            except ValueError:
+                print(f"ignoring {a}: not a number", file=sys.stderr)
     info = scan(root, limit)
     if "--summary" in sys.argv:
         print(summary(info))

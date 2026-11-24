@@ -83,10 +83,12 @@ def main():
         )
     )
     out.append(section("cr", "Change requests", "Scope changes and their impact."))
-    (L.ledger_dir() / "INDEX.md").write_text(
-        "\n".join(out), encoding="utf-8", newline="\n"
-    )
-    print(L.ledger_dir() / "INDEX.md")
+    # `target`, not the default location. Writing to `ledger_dir()/INDEX.md`
+    # checked the marker on the configured file and then wrote over whatever
+    # sat at the default path -- which destroyed a hand-written INDEX.md in
+    # testing, the single thing the marker check exists to prevent.
+    target.write_text("\n".join(out), encoding="utf-8", newline="\n")
+    print(target)
     return 0
 
 

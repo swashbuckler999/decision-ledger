@@ -104,7 +104,14 @@ def changed_files(cwd):
 
 def already_reported(cwd, key, digest):
     """Report once per distinct situation, not once per turn."""
-    marker = cwd / ".git" / f"ledger-{key}"
+    # The real git directory, which in a worktree is not cwd/.git -- that is a
+    # file there, so mkdir raised FileExistsError, the marker was never
+    # written, and the de-duplication this function exists for silently did
+    # nothing: the same reminder every single turn.
+    gd = L.git_dir(cwd)
+    if gd is None:
+        return False  # cannot remember; warn rather than go quiet
+    marker = gd / f"ledger-{key}"
     try:
         if marker.is_file() and marker.read_text(encoding="utf-8").strip() == digest:
             return True
@@ -119,7 +126,7 @@ def digest_of(items):
     return hashlib.sha256("\n".join(sorted(items)).encode()).hexdigest()[:16]
 
 
-def orphan_warning(cwd):
+def orphan_warning(cwd, payload):
     """Content dropped from the state file with no copy anywhere else.
 
     Checked independently of the code-change nag below: editing the state file
@@ -127,7 +134,7 @@ def orphan_warning(cwd):
     the state file is exactly where silent loss happens.
     """
     try:
-        orphans, _ = check_state.find_orphans(cwd)
+        orphans, _ = check_state.find_orphans(cwd, payload)
     except Exception:
         return None
     if not orphans:
@@ -137,9 +144,10 @@ def orphan_warning(cwd):
     listing = "\n".join(f"  {line}" for line in orphans[:15])
     if len(orphans) > 15:
         listing += f"\n  ...and {len(orphans) - 15} more"
-    return ORPHAN_MESSAGE.format(state=L.STATE_FILE, orphans=listing,
-                                 constraints=L.CONSTRAINTS_FILE,
-                                 journey=L.JOURNEY_FILE)
+    return ORPHAN_MESSAGE.format(state=L.rel_path("briefing", payload),
+                                 orphans=listing,
+                                 constraints=L.rel_path("constraints", payload),
+                                 journey=L.rel_path("journey", payload))
 
 
 def unrecorded_warning(cwd, files, payload):
@@ -167,7 +175,7 @@ def body():
     if files is None:
         return  # not a git repo, or git unavailable: stay quiet
 
-    warnings = [w for w in (orphan_warning(cwd),
+    warnings = [w for w in (orphan_warning(cwd, payload),
                             missing_briefing_warning(cwd, payload),
                             unrecorded_warning(cwd, files, payload)) if w]
     if not warnings:

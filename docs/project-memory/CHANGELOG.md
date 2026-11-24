@@ -34,3 +34,7 @@ carries the reasoning.
 - 2026-11-24 **ADR-0016** Score mined commits and cap the worklist - `docs/project-memory/decisions/ADR-0016-score-mined-commits-and-cap-the-worklist.md`
 - 2026-11-24 **ADR-0017** Warn when records exist with no briefing - `docs/project-memory/decisions/ADR-0017-warn-when-records-exist-with-no-briefing.md`
 - 2026-11-24 **REJ-0008** Mine every commit that states a reason - `docs/project-memory/rejections/REJ-0008-mine-every-commit-that-states-a-reason.md`
+- 2026-11-25 **ADR-0018** Recognise worktrees and submodules as git - `docs/project-memory/decisions/ADR-0018-recognise-worktrees-and-submodules-as-git.md`
+- 2026-11-25 **ADR-0019** Write the index to its configured path - `docs/project-memory/decisions/ADR-0019-write-the-index-to-its-configured-path.md`
+- 2026-11-25 **ADR-0020** Treat a config of the wrong shape as absent - `docs/project-memory/decisions/ADR-0020-treat-a-config-of-the-wrong-shape-as-absent.md`
+- 2026-11-25 Edge-case pass: 8 defects fixed, 28 checks added (200 total) - see JOURNEY.md 2026-11-25

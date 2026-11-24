@@ -179,3 +179,61 @@ CONSTRAINTS.md.
 The CRLF bug taught that git normalisation can hide a defect. This one taught
 the quieter version: a code path that returns nothing on all real data is
 untested, not working.
+
+## 2026-11-25 — an edge-case pass, after the simulation said everything worked
+
+Immediately after pushing the nine commits the owner asked:
+
+> Please check if we are missing any edge cases?
+
+The three-situation simulation had just passed and 172 checks were green, so
+this was a good test of whether green means anything. It did not: eight real
+defects came out of one afternoon, and two of them lost data.
+
+The question that found most of them was not "is this code correct" but **"what
+environment has this never run in"**. Three answers, each with a bug behind it:
+
+- **A linked git worktree.** `.git` is a file there, not a directory. Three
+  components tested `.is_dir()`, so the scanner called a repository with full
+  history unversioned, the miner found nothing in it, and the Stop hook's
+  de-dup marker could not be written — measured as three identical warnings in
+  three consecutive turns, which is precisely the behaviour REJ-0004 was
+  written to avoid. Claude Code's own sessions run in worktrees. One corpus
+  project is one too, and the survey had been quietly miscounting it: 39 git
+  repositories under the old test, 40 under the new. ADR-0018.
+- **A path with no git at all.** `mine_history --summary` crashed with
+  `KeyError: 'first_commit'`, because the non-git early return built a dict
+  with fewer keys than the normal one — on the exact command the
+  `ledger-backfill` skill gives as step one.
+- **A config pointing somewhere unusual.** `build_index.py` checked the
+  overwrite guard on the configured index and then wrote to the hardcoded
+  default. In a sandbox it exited 0, printed a path, created nothing where it
+  said, and **destroyed a hand-written `INDEX.md`**. The ADR-0008 guard was
+  present and did not fire, because it was inspecting a different file from the
+  one being written. ADR-0019.
+
+Then the config file itself, which is the one input edited by hand with no
+schema in front of it. `"paths": "docs"` crashed; `"changelog_order": true`
+crashed; `"adopted": "decisions"` did not crash and was worse, because `in` on
+a string is a substring test and unrelated keys came back adopted. And `paths`
+was unvalidated, so `C:/Windows/Temp/evil.md` resolved to exactly that — the
+ledger appending to a file outside the repository it was installed in, against
+the standing rule about blast radius. ADR-0020.
+
+Three smaller ones, fixed in the same pass: the session briefing capped
+rejections at 40 but injected every accepted decision, so a long-lived project
+would crowd out the briefing with its own history; the hook messages named our
+default filenames at projects that had adopted different ones, sending the
+reader to a file that does not exist; and orphan detection resolved the
+briefing against the process directory while resolving git against the hook's,
+so a mismatch compared the wrong file against the right history.
+
+### What this changed about how the work is checked
+
+The simulation drives the scripts through the three *situations*. It had
+nothing to say about the three *environments*, and that is where every one of
+these lived. Both lists now get walked.
+
+And the heredoc lesson landed for the fourth time: patching generated Python
+through a shell heredoc failed again, mid-edit, with an unterminated quote.
+The Write tool is not a preference in this project any more.
