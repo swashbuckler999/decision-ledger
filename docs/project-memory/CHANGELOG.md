@@ -16,3 +16,4 @@ carries the reasoning.
 - 2026-11-24 Hook test suite added, 40 checks, all passing - `tests/test_hooks.py`
 - 2026-11-24 Fixed: Stop gate fired wrongly because git collapses untracked directories
 - 2026-11-24 SessionStart matcher narrowed to startup|clear|compact|fork, saving ~1,490 tokens per resume - see ADR-0003 Diversions
+- 2026-11-24 **REJ-0005** Run the ledger on a cheaper model, in a subagent - `docs/project-memory/rejections/REJ-0005-run-the-ledger-on-a-cheaper-model.md`

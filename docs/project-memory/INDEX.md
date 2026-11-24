@@ -28,6 +28,7 @@ Settled arguments. **Read these before proposing anything new.**
 | [REJ-0002](rejections/REJ-0002-global-claude-md-mandate-as-enforcement.md) | Global CLAUDE.md mandate as the enforcement mechanism | rejected | 2026-11-24 |
 | [REJ-0003](rejections/REJ-0003-single-append-only-decisions-file.md) | Single append-only DECISIONS.md | rejected | 2026-11-24 |
 | [REJ-0004](rejections/REJ-0004-blocking-stop-hook-by-default.md) | Blocking Stop hook by default | rejected | 2026-11-24 |
+| [REJ-0005](rejections/REJ-0005-run-the-ledger-on-a-cheaper-model.md) | Run the ledger on a cheaper model, in a subagent | rejected | 2026-11-24 |
 
 
 ## Change requests
