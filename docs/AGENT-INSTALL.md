@@ -81,7 +81,7 @@ This step decides what you do next, so do not skip it. Run the read-only
 scanner from the installed plugin directory:
 
 ```
-python scripts/scan_project.py --propose .
+python "<plugin>/scripts/scan_project.py" --propose .
 ```
 
 It writes nothing. It prints a proposed configuration on stdout and review

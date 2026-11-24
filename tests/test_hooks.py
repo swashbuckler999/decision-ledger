@@ -1589,6 +1589,121 @@ def test_recording_a_decision_still_silences_the_nag():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_no_unanchored_script_paths_in_instructions():
+    r"""Every instruction telling anyone to run a plugin script must anchor it.
+
+    `scripts/` ships with the PLUGIN; an agent's working directory is the
+    USER'S project. A bare `python scripts/new_record.py` therefore resolves
+    to `<their repo>/scripts/...` and finds nothing. A live session hit this
+    on all nine skill call sites and fell back to numbering records by hand --
+    bypassing the atomic id allocation, the CRLF-safe changelog insert and the
+    whole deterministic layer, while appearing to work.
+
+    `$CLAUDE_PLUGIN_ROOT` is not the fix: the harness substitutes it for hook
+    commands, but it is empty in a tool shell, and in Git Bash the empty
+    expansion silently becomes a path under the Git installation.
+    """
+    print("\nScript paths in instructions are anchored")
+    import re
+    cmd = re.compile(r"(?:python3?|py)\s+[\"']?([^\s\"'`]+\.py)")
+    script_names = {p.name for p in (ROOT / "scripts").glob("*.py")}
+    targets = (list((ROOT / "skills").rglob("*.md"))
+               + [ROOT / "README.md", ROOT / "docs" / "INSTALL.md",
+                  ROOT / "docs" / "AGENT-INSTALL.md"]
+               + list((ROOT / "scripts").glob("*.py")))
+    bad = []
+    for f in targets:
+        for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            for m in cmd.finditer(line):
+                path = m.group(1).replace("\\", "/")
+                if path.rsplit("/", 1)[-1] not in script_names:
+                    continue
+                anchored = ("CLAUDE_PLUGIN_ROOT" in line or "<plugin" in line
+                            or "skill base directory" in line
+                            or path.startswith(("$", "${")))
+                if not anchored:
+                    bad.append(f"{f.relative_to(ROOT).as_posix()}:{i}")
+    check("no bare 'python scripts/...' anywhere", not bad, "; ".join(bad[:5]))
+
+    abs_re = re.compile(r"(?<![\w`])([A-Za-z]:[\\/][^\s`'\"<>|)]{3,})")
+    stray = []
+    for f in targets:
+        for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            for m in abs_re.finditer(line):
+                if m.group(1).startswith(("C:/Windows", "C:\\Windows")):
+                    continue  # the deliberate hostile-path examples
+                stray.append(f"{f.relative_to(ROOT).as_posix()}:{i} {m.group(1)[:50]}")
+    check("no absolute machine paths in instructions", not stray,
+          "; ".join(stray[:3]))
+
+
+def test_project_flag_pins_the_project():
+    """Scripts fell back to the working directory to find the project.
+
+    In an agent's shell LEDGER_PROJECT_DIR, CLAUDE_PROJECT_DIR and
+    CLAUDE_PLUGIN_ROOT are all empty, so the fallback is cwd -- and a live
+    session had its cwd reset mid-session by the harness. The record would
+    have been scaffolded into an unrelated folder, silently, with the script
+    reporting success.
+    """
+    print("\n--project pins the project")
+    d = make_repo()
+    elsewhere = Path(tempfile.mkdtemp(prefix="ledger-elsewhere-"))
+    try:
+        env = dict(os.environ)
+        env.pop("LEDGER_PROJECT_DIR", None)
+        env.pop("CLAUDE_PROJECT_DIR", None)
+        # Run FROM the wrong directory, with the right one passed explicitly.
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "new_record.py"), "--project", str(d),
+             "adr", "Pinned correctly"],
+            capture_output=True, text=True, cwd=str(elsewhere), env=env, timeout=30)
+        check("exits 0", out.returncode == 0, out.stderr[-200:])
+        made = list((d / "docs" / "project-memory" / "decisions").glob("*.md"))
+        check("the record lands in the named project", len(made) == 1,
+              str([p.name for p in made]))
+        check("and nothing is written to the working directory",
+              not (elsewhere / "docs").exists(),
+              str(list(elsewhere.iterdir())))
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "build_index.py"), f"--project={d}"],
+            capture_output=True, text=True, cwd=str(elsewhere), env=env, timeout=30)
+        check("build_index accepts --project=<path> too", out.returncode == 0,
+              out.stderr[-160:])
+        check("the index lands in the named project",
+              (d / "docs" / "project-memory" / "INDEX.md").is_file())
+        check("still nothing in the working directory",
+              not (elsewhere / "docs").exists())
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+        shutil.rmtree(elsewhere, ignore_errors=True)
+
+
+def test_session_start_hands_over_absolute_paths():
+    """The briefing carries the two paths an agent cannot work out itself."""
+    print("\nSessionStart hands over the paths")
+    d = make_repo()
+    try:
+        out, _e, _c = run_hook("session_start.py", {"cwd": str(d),
+                                                    "hook_event_name": "SessionStart"})
+        ctx = context_of(out)
+        scripts_dir = (ROOT / "scripts").resolve().as_posix()
+        check("names the absolute scripts directory", scripts_dir in ctx,
+              ctx[-400:])
+        check("names the absolute project root",
+              Path(d).resolve().as_posix() in ctx, ctx[-400:])
+        check("shows a runnable example with --project", "--project" in ctx)
+        check("warns off the empty plugin-root variable",
+              "CLAUDE_PLUGIN_ROOT" in ctx and "empty" in ctx)
+        sys.path.insert(0, str(SCRIPTS))
+        import _ledger as L
+        check("plugin_root finds scripts and skills as siblings",
+              (L.plugin_root() / "scripts").is_dir()
+              and (L.plugin_root() / "skills").is_dir(), str(L.plugin_root()))
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def main():
     print("decision-ledger hook tests")
     for t in (test_session_start, test_briefing_without_constraints_file,
@@ -1629,7 +1744,10 @@ def main():
               test_hooks_survive_hostile_payloads,
               test_unborn_and_detached_head,
               test_activity_trail_does_not_silence_the_nag,
-              test_recording_a_decision_still_silences_the_nag):
+              test_recording_a_decision_still_silences_the_nag,
+              test_no_unanchored_script_paths_in_instructions,
+              test_project_flag_pins_the_project,
+              test_session_start_hands_over_absolute_paths):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test

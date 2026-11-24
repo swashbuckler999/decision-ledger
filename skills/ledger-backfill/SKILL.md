@@ -7,6 +7,27 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash(python *), Bash(git log *), B
 
 # Backfill the ledger from existing history
 
+> **Running a script from a skill.** `scripts/` is in the *plugin*, not in
+> the user's project, so a bare `scripts/...` path resolves against their
+> repository and finds nothing. `$CLAUDE_PLUGIN_ROOT` does not help either:
+> the harness substitutes it for hook commands, but it is **empty** in a tool
+> shell, and in Git Bash the empty expansion silently becomes a path under the
+> Git install.
+>
+> Two reliable anchors, in order of preference:
+>
+> 1. The **absolute paths in the project-memory context block** injected at the
+>    start of the session, under "Running the ledger scripts". Prefer these.
+> 2. If that block is absent -- which it is in a project with no ledger yet --
+>    the plugin root is **two levels up from this skill's base directory**, the
+>    absolute path given at the top of this file. `scripts/` and `skills/` are
+>    siblings there.
+>
+> Always pass `--project "<absolute project root>"`. The scripts otherwise fall
+> back to the working directory, which the harness can change mid-session, and
+> the ledger would be written somewhere else without any error.
+
+
 A project with eight months of commits and no notes is **not greenfield**, and
 treating it as greenfield is the single most expensive mistake available here.
 Every decision already made stays in the commit log, where no future session
@@ -41,7 +62,7 @@ That record is useful. A confident fabrication is worse than nothing.
 ## 1. Mine the history
 
 ```
-python scripts/mine_history.py <project path> --summary
+python "<plugin root>/scripts/mine_history.py" <project path> --summary
 ```
 
 Read-only. It scores every commit for evidence and prints the strongest, worth
@@ -145,7 +166,7 @@ Tell the user, plainly:
 - That everything you did not record is still in git history and nothing was
   deleted or rewritten
 
-Then run `python scripts/build_index.py` so the index covers the new records.
+Then run `python "<plugin root>/scripts/build_index.py" --project "<project root>"` so the index covers the new records.
 
 ## What not to do
 

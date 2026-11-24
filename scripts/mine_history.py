@@ -12,8 +12,8 @@ much of it fits in a context window. The filter here is deterministic and the
 same every run.
 
 Usage:
-    python scripts/mine_history.py [path]            # JSON candidates
-    python scripts/mine_history.py [path] --summary  # human-readable
+    python <plugin>/scripts/mine_history.py [path]            # JSON candidates
+    python <plugin>/scripts/mine_history.py [path] --summary  # human-readable
 """
 
 import json

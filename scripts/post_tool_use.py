@@ -3,6 +3,21 @@
 Not documentation -- working notes. Its only job is to give wrap-session
 something factual to reconstruct from when the conversation itself is gone.
 The activity folder is self-ignoring, so this never pollutes the repository.
+
+**The trail is best-effort and systematically incomplete.** The hook matches
+`Edit|Write|NotebookEdit`, so a file changed through the shell -- a heredoc, a
+`sed -i`, a Python one-liner -- leaves no entry. A live session found this
+directly: the same file edited via Bash produced nothing and via Edit produced
+an entry immediately, and in permission modes that encourage the shell the
+under-recording is the normal case, not the exception.
+
+Matching `Bash` as well was considered and rejected: it would log every `ls`
+and `git status` into a file nobody reads, and still could not say which
+commands wrote anything.
+
+So the trail is a hint, never evidence. Anything that must survive goes in a
+record, which is written deliberately. Nothing in the ledger's promises rests
+on this file being complete.
 """
 
 import sys

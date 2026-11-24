@@ -7,6 +7,27 @@ allowed-tools: Read, Write, Glob, Grep, Bash(python *), Bash(git log *), Bash(gi
 
 # Adopt the ledger into an existing project
 
+> **Running a script from a skill.** `scripts/` is in the *plugin*, not in
+> the user's project, so a bare `scripts/...` path resolves against their
+> repository and finds nothing. `$CLAUDE_PLUGIN_ROOT` does not help either:
+> the harness substitutes it for hook commands, but it is **empty** in a tool
+> shell, and in Git Bash the empty expansion silently becomes a path under the
+> Git install.
+>
+> Two reliable anchors, in order of preference:
+>
+> 1. The **absolute paths in the project-memory context block** injected at the
+>    start of the session, under "Running the ledger scripts". Prefer these.
+> 2. If that block is absent -- which it is in a project with no ledger yet --
+>    the plugin root is **two levels up from this skill's base directory**, the
+>    absolute path given at the top of this file. `scripts/` and `skills/` are
+>    siblings there.
+>
+> Always pass `--project "<absolute project root>"`. The scripts otherwise fall
+> back to the working directory, which the harness can change mid-session, and
+> the ledger would be written somewhere else without any error.
+
+
 A project that has kept notes for years has more to lose than one starting
 fresh, and it is also the project where this is worth the most. Your job is to
 fit the ledger around what exists, not to replace it.
@@ -19,7 +40,7 @@ operation, and it is deliberately not built.
 ## 1. Run the scanner. Do not do this by eye.
 
 ```
-python scripts/scan_project.py --propose <project path>
+python "<plugin root>/scripts/scan_project.py" --propose <project path>
 ```
 
 It prints a draft `.ledger.json` on stdout and review notes on stderr. It is
@@ -141,7 +162,7 @@ Recorded in `{path}`.
 A malformed config is ignored rather than fatal, so validate it after writing:
 
 ```
-python scripts/build_index.py
+python "<plugin root>/scripts/build_index.py" --project "<project root>"
 ```
 
 If that resolves to the paths you intended, the config parsed.

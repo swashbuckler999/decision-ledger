@@ -11,7 +11,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude_Code-2.1+-d97757?style=for-the-badge&labelColor=1c1917)](https://claude.com/claude-code)
 [![Python](https://img.shields.io/badge/Python-3.9+-3776ab?style=for-the-badge&labelColor=1c1917&logo=python&logoColor=white)](https://www.python.org/)
 [![Dependencies](https://img.shields.io/badge/dependencies-none-16a34a?style=for-the-badge&labelColor=1c1917)](#requirements)
-[![Checks](https://img.shields.io/badge/checks-264_passing-16a34a?style=for-the-badge&labelColor=1c1917)](#tests)
+[![Checks](https://img.shields.io/badge/checks-277_passing-16a34a?style=for-the-badge&labelColor=1c1917)](#tests)
 [![Corpus](https://img.shields.io/badge/designed_against-82_real_projects-6e5494?style=for-the-badge&labelColor=1c1917)](docs/corpus-survey.md)
 [![License](https://img.shields.io/badge/license-MIT-57534e?style=for-the-badge&labelColor=1c1917)](LICENSE)
 
@@ -134,8 +134,14 @@ mkdir docs\project-memory\decisions, docs\project-memory\rejections, docs\projec
 **4 · Ask which situation your project is in**
 
 ```powershell
-python scripts\scan_project.py --propose .
+python "<plugin>\scripts\scan_project.py" --propose .
 ```
+
+<sub>Those commands live in the plugin, not in your project. Replace
+`<plugin>` with the installed plugin directory — the path
+`claude plugin details decision-ledger` reports, typically
+`~/.claude/plugins/cache/sayan-skills/decision-ledger/<version>`. A bare
+`scripts\...` path will not resolve from inside your own repository.</sub>
 
 That last one writes nothing. It prints what the project already has and which
 skill to start with — nothing at all, `/ledger-backfill`, or `/ledger-adopt`.
@@ -295,7 +301,7 @@ That depends entirely on what the project already has — and you do not have to
 guess. A read-only scanner will tell you:
 
 ```powershell
-python scripts\scan_project.py --propose .
+python "<plugin>\scripts\scan_project.py" --propose .
 ```
 
 <table>
@@ -458,9 +464,9 @@ Mostly you do not. The hooks fire on their own and the agent invokes
 |---|---|
 | `/cold-start` | Picking up a project you do not remember |
 | `/wrap-session` | Before you stop for the day |
-| `python scripts\mine_history.py . --summary` | To see what your history still holds that the ledger does not |
-| `python scripts\check_state.py` | Lists anything dropped from the state file that exists nowhere else |
-| `python scripts\build_index.py` | After adding records by hand |
+| `python "<plugin>\scripts\mine_history.py" . --summary` | To see what your history still holds that the ledger does not |
+| `python "<plugin>\scripts\check_state.py" --project .` | Lists anything dropped from the state file that exists nowhere else |
+| `python "<plugin>\scripts\build_index.py" --project .` | After adding records by hand |
 
 ---
 
@@ -478,7 +484,7 @@ No third-party packages. No network access. Nothing leaves the machine.
 python tests\test_hooks.py
 ```
 
-**241 checks**, dependency-free. Each one drives a hook with the JSON payload
+**254 checks**, dependency-free. Each one drives a hook with the JSON payload
 Claude Code really sends, or a script against a throwaway repository on disk.
 Every bug this project has had keeps a named regression test — the
 untracked-directory bug it shipped with, the changelog write that silently
@@ -524,14 +530,18 @@ built and thrown away.
 
 > **v0.1.0 — early, and honest about it.**
 >
-> The scripts and hooks carry 241 unit checks and a 23-check session replay, have been run read-only against all 82
+> The scripts and hooks carry 254 unit checks and a 23-check session replay, have been run read-only against all 82
 > corpus projects, and the three adoption situations are simulated end to end
 > against sandbox copies.
 >
-> What has **not** happened yet: a full live Claude Code session with the plugin
-> installed. Hook command strings are verified; harness registration and the
-> skills themselves are not. That is the largest remaining unknown, and it is
-> recorded as such in the briefing rather than glossed over here.
+> A first live session with the plugin installed has now run: the hooks fire,
+> the briefing reaches the model, all five skills are visible, and
+> `decision-ledger` ran end to end. It also found that every script path in
+> every instruction was unreachable outside the development checkout — fixed,
+> with a repository-wide check so it cannot come back.
+>
+> What has **not** happened: sustained use on a real project. One session
+> proves the wiring, not the judgement.
 
 ---
 

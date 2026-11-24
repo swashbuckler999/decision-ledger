@@ -515,3 +515,77 @@ What generalises: a description written by the person who built the thing
 cannot be reviewed by them. The overlaps were glaring in the report and
 invisible in the writing, and the only reason they surfaced is that something
 with no memory of writing them was asked to use them.
+
+## 2026-11-25 — the live session, and the bug no amount of testing here could find
+
+The trial finally ran: a real Claude Code session, in a throwaway project, with
+the plugin installed.
+
+Both unknowns closed. **SessionStart context reaches the model** — it answered
+the endpoint and the rejection cold, before touching a tool, and could quote
+the injected block. **All five skills were visible and invokable**, and
+`decision-ledger` ran end to end: it read its own SKILL.md and templates,
+followed them, quoted the user verbatim, and produced ADR-0001 plus the
+master-file updates.
+
+Then it reported four defects, and the first one is the most serious thing
+found in this project.
+
+### Every script path in every instruction was wrong
+
+`python scripts/new_record.py` — a bare relative path, in all nine skill call
+sites and twelve more across the README and install guides. The scripts live
+in the **plugin**; the agent's working directory is the **user's project**. It
+resolves to nothing.
+
+It had never appeared because every test, simulation and corpus pass ran from
+the development checkout, where `scripts/` happens to resolve. **The checkout
+is a privileged environment, and testing in it is testing the one place the
+bug cannot occur.**
+
+The consequence was worse than a missing file, because the skill says what to
+do without the script: the session allocated the id by hand and wrote the
+changelog directly. So the atomic id allocation (ADR-0023), the CRLF-preserving
+insert (ADR-0010) and the adoption-aware ordering were **all bypassed, and it
+reported success.** Months of work on the deterministic layer, unreachable in
+production, with nothing anywhere saying so.
+
+Asked to establish the fix empirically rather than have me guess it, the
+session came back with three facts. `CLAUDE_PLUGIN_ROOT` is **empty** in a tool
+shell — the harness substitutes it for hook commands, which is exactly why the
+hooks were never affected — and in Git Bash the empty expansion silently
+becomes a path inside the Git installation. `scripts/` and `skills/` are
+siblings, and a skill is handed its own absolute base directory. And a
+**second, independent bug**: `project_dir()` falls back to `os.getcwd()`, and
+the harness had reset that session's working directory mid-session, so fixing
+only the path would have scaffolded records into an unrelated folder.
+
+Fixed three ways, because one was not enough: the SessionStart hook now hands
+over both absolute paths (it runs where the variable works and can locate
+itself), a `--project` flag pins the target so no script infers it from
+ambient state, and all 21 call sites are anchored with a fallback for the
+projects where the briefing is silent — which is precisely the projects the
+adoption skills exist for.
+
+### The other three
+
+The rejection list in the briefing ships titles only, yet told the model to
+cite a rejection "unless its re-evaluation trigger has actually fired" — which
+cannot be judged from a title. It now says to open the record first.
+
+"Append, never rewrite" never said what to do when the file does not exist. A
+literal reader skips the entry entirely. It now says that creating a missing
+file is not a rewrite.
+
+And the activity trail is systematically incomplete: it matches
+`Edit|Write|NotebookEdit`, so anything written through the shell leaves no
+entry — the normal case in permission modes that favour Bash. Matching `Bash`
+too was considered and rejected; the trail is a hint, never evidence, and that
+is now written where it will be read.
+
+### What this changes about how the work is checked
+
+The four questions each found what the others could not: what situation, what
+environment, what file state, what happened earlier in the session. This adds
+a fifth, and it subsumes the rest: **what is true only here?** Every previous
+round ran inside the one directory where the plugin's own layout is correct.

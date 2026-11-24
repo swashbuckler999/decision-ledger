@@ -41,6 +41,7 @@ What was chosen, and why.
 | [ADR-0028](decisions/ADR-0028-the-activity-trail-is-not-a-recording.md) | The activity trail is not a recording | accepted | 2026-11-25 |
 | [ADR-0029](decisions/ADR-0029-trial-the-whole-flow-on-copies-of-real-projects.md) | Trial the whole flow on copies of real projects | accepted | 2026-11-25 |
 | [ADR-0030](decisions/ADR-0030-test-skill-selection-against-the-advertised-text.md) | Test skill selection against the advertised text | accepted | 2026-11-25 |
+| [ADR-0031](decisions/ADR-0031-anchor-every-script-path-the-instructions-give.md) | Anchor every script path the instructions give | accepted | 2026-11-25 |
 
 
 ## Rejections

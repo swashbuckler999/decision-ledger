@@ -7,6 +7,27 @@ allowed-tools: Read, Write, Edit, Bash(python *), Bash(git diff *), Bash(git sta
 
 # Decision Ledger
 
+> **Running a script from a skill.** `scripts/` is in the *plugin*, not in
+> the user's project, so a bare `scripts/...` path resolves against their
+> repository and finds nothing. `$CLAUDE_PLUGIN_ROOT` does not help either:
+> the harness substitutes it for hook commands, but it is **empty** in a tool
+> shell, and in Git Bash the empty expansion silently becomes a path under the
+> Git install.
+>
+> Two reliable anchors, in order of preference:
+>
+> 1. The **absolute paths in the project-memory context block** injected at the
+>    start of the session, under "Running the ledger scripts". Prefer these.
+> 2. If that block is absent -- which it is in a project with no ledger yet --
+>    the plugin root is **two levels up from this skill's base directory**, the
+>    absolute path given at the top of this file. `scripts/` and `skills/` are
+>    siblings there.
+>
+> Always pass `--project "<absolute project root>"`. The scripts otherwise fall
+> back to the working directory, which the harness can change mid-session, and
+> the ledger would be written somewhere else without any error.
+
+
 You are the custodian of this project's institutional memory. Your job is to make
 sure that a person or an agent arriving with no memory of this conversation can
 read `docs/project-memory/` and know not only what was built, but **what was
@@ -21,7 +42,16 @@ may have its own `CHANGELOG.md`, its own `JOURNEY.md`, its own conventions,
 maintained by hand over years.
 
 **Never rewrite a ledger file you did not create in this session.** Add to the
-end of it, matching the style already there. Specifically:
+end of it, matching the style already there.
+
+**If the file does not exist yet, create it.** The rule protects content that
+exists; there is nothing to preserve in a file that is not there. A new
+project has no `CHANGELOG.md`, no `JOURNEY.md` and no `CONSTRAINTS.md` until
+the first record is written, and a literal reading of "append, never rewrite"
+would skip the entry entirely. Create it with a one-line heading and add your
+entry. Never create one by copying content out of an existing file.
+
+Specifically:
 
 - `CHANGELOG.md`, `JOURNEY.md`, `CONSTRAINTS.md` — append only, always. Do not
   reformat, reorder, deduplicate or "clean up" existing entries, however
@@ -74,7 +104,7 @@ rediscovering this?* If no, skip it.
 Never guess the next number and never scan the folder by hand. Run:
 
 ```
-python scripts/new_record.py <adr|rej|cr> "<short title>"
+python "<plugin root>/scripts/new_record.py" --project "<project root>" <adr|rej|cr> "<short title>"
 ```
 
 It allocates the next free ID atomically, creates the file from the right

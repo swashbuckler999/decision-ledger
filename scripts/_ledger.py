@@ -68,6 +68,46 @@ def project_dir(payload=None):
     return Path(os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd()))
 
 
+def take_project_flag(argv):
+    """Pop `--project <path>` (or `--project=<path>`) and pin the project to it.
+
+    Without this every writing script resolved the project from the process
+    working directory, and a live session showed why that is not safe: in an
+    agent's shell `LEDGER_PROJECT_DIR`, `CLAUDE_PROJECT_DIR` and
+    `CLAUDE_PLUGIN_ROOT` are all empty, so the fallback is cwd -- and the
+    harness reset that session's cwd mid-session to an unrelated folder. The
+    records would have been scaffolded there, silently and correctly as far as
+    the script could tell.
+
+    A flag rather than an environment variable because the instruction has to
+    work in whatever shell the agent happens to use. `VAR=x command` is POSIX
+    and does nothing in PowerShell, and the agent does not choose its shell.
+
+    Returns argv with the flag removed.
+    """
+    out, i = [], 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--project" and i + 1 < len(argv):
+            os.environ["LEDGER_PROJECT_DIR"] = argv[i + 1]
+            i += 2
+            continue
+        if a.startswith("--project="):
+            os.environ["LEDGER_PROJECT_DIR"] = a.split("=", 1)[1]
+            i += 1
+            continue
+        out.append(a)
+        i += 1
+    return out
+
+
+def plugin_root():
+    """The installed plugin's own directory -- where `scripts/` and `skills/`
+    sit side by side. Derived from this file's location, so it is right in the
+    source checkout and in any install, and needs no environment variable."""
+    return Path(__file__).resolve().parent.parent
+
+
 def config(payload=None):
     """The project's .ledger.json, or {} when it has none.
 

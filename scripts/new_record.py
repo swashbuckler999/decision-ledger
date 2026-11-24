@@ -1,6 +1,6 @@
 """Allocate and scaffold a new ledger record.
 
-Usage:  python scripts/new_record.py <adr|rej|cr> "short title"
+Usage:  python <plugin>/scripts/new_record.py <adr|rej|cr> "short title"
 
 Prints the created path. Exits 1 on bad input so a caller can tell the
 difference between "created" and "nothing happened".
@@ -125,14 +125,16 @@ BODIES = {"adr": ADR, "rej": REJ, "cr": CR}
 
 
 def main():
-    if len(sys.argv) < 3:
+    # Pin the project before anything resolves a path from cwd.
+    argv = L.take_project_flag(sys.argv)
+    if len(argv) < 3:
         print(__doc__.strip(), file=sys.stderr)
         return 1
-    kind = sys.argv[1].lower()
+    kind = argv[1].lower()
     if kind not in BODIES:
         print(f"unknown record kind {kind!r}: expected adr, rej or cr", file=sys.stderr)
         return 1
-    title = " ".join(sys.argv[2:]).strip()
+    title = " ".join(argv[2:]).strip()
     if not title:
         print("a title is required", file=sys.stderr)
         return 1

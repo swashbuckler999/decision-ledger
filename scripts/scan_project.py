@@ -9,8 +9,8 @@ entry format it uses. Getting the order wrong files new entries under the
 oldest heading in a file that may hold years of work.
 
 Usage:
-    python scripts/scan_project.py [path]            # one project, JSON
-    python scripts/scan_project.py --survey [parent] # every child, JSON array
+    python <plugin>/scripts/scan_project.py [path]            # one project, JSON
+    python <plugin>/scripts/scan_project.py --survey [parent] # every child, JSON array
 """
 
 import json

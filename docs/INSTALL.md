@@ -214,7 +214,7 @@ while you are diagnosing something.
 the hooks deliberately stay silent without it. Then run the hook by hand:
 
 ```powershell
-'{"cwd":"."}' | python scripts\session_start.py
+'{"cwd":"."}' | python "<plugin>\scripts\session_start.py"
 ```
 
 Output means the script works and the problem is registration. No output means

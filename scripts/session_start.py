@@ -68,9 +68,12 @@ def body():
         parts += [
             "",
             "Before proposing a library, pattern or approach, check this list. "
-            "If it is here, cite the rejection instead of re-proposing it -- "
-            "unless its re-evaluation trigger has actually fired, in which case "
-            "say so explicitly.",
+            "If it is here, cite the rejection instead of re-proposing it. "
+            "These are titles only: the reason and the re-evaluation trigger "
+            "are in the record itself, so OPEN IT before claiming the trigger "
+            "has fired -- you cannot tell from this list, and asserting it "
+            "from a title alone is how a settled argument gets reopened on a "
+            "guess.",
             "",
         ]
     else:
@@ -108,7 +111,31 @@ def body():
         parts += L.tail(journey, 30)
         parts.append("")
 
+    # The two absolute paths every skill needs, resolved by something that
+    # actually knows them. A live session established that CLAUDE_PLUGIN_ROOT
+    # is empty in an agent's shell -- the harness substitutes it for hook
+    # commands only -- and that the agent's working directory can be reset
+    # mid-session. So neither path can be left to the agent to work out: a
+    # relative `scripts/...` resolves against the user's project and finds
+    # nothing, and a script left to infer the project from cwd can write the
+    # ledger into whatever folder the harness last moved to.
     parts += [
+        "## Running the ledger scripts",
+        "",
+        "Use these absolute paths. Do not use a bare `scripts/...` path, and "
+        "do not rely on `$CLAUDE_PLUGIN_ROOT`, which is empty in tool shells.",
+        "",
+        f"- scripts:      `{(L.plugin_root() / 'scripts').as_posix()}`",
+        f"- project root: `{L.project_dir(payload).resolve().as_posix()}`",
+        "",
+        "Always pass the project explicitly, so a changed working directory "
+        "cannot send records somewhere else:",
+        "",
+        "```",
+        f"python \"{(L.plugin_root() / 'scripts' / 'new_record.py').as_posix()}\" "
+        f"--project \"{L.project_dir(payload).resolve().as_posix()}\" adr \"<title>\"",
+        "```",
+        "",
         "## Your obligation this session",
         "",
         "When a decision is made, an option is rejected, scope changes, or the "

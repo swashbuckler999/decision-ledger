@@ -9,8 +9,8 @@ removed line asks: does this content still exist anywhere else in the ledger?
 Lines that exist nowhere else are orphans.
 
 Usage:
-    python scripts/check_state.py            # report orphans
-    python scripts/check_state.py --quiet    # exit code only
+    python <plugin>/scripts/check_state.py            # report orphans
+    python <plugin>/scripts/check_state.py --quiet    # exit code only
 
 Exit codes: 0 nothing orphaned (or nothing to compare), 1 orphans found.
 
@@ -129,6 +129,7 @@ def find_orphans(cwd=None, payload=None):
 
 
 def main():
+    L.take_project_flag(sys.argv)
     quiet = "--quiet" in sys.argv
     orphans, reason = find_orphans()
 

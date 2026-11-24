@@ -7,6 +7,27 @@ allowed-tools: Read, Glob, Grep, Bash(python *), Bash(git log *)
 
 # Cold start
 
+> **Running a script from a skill.** `scripts/` is in the *plugin*, not in
+> the user's project, so a bare `scripts/...` path resolves against their
+> repository and finds nothing. `$CLAUDE_PLUGIN_ROOT` does not help either:
+> the harness substitutes it for hook commands, but it is **empty** in a tool
+> shell, and in Git Bash the empty expansion silently becomes a path under the
+> Git install.
+>
+> Two reliable anchors, in order of preference:
+>
+> 1. The **absolute paths in the project-memory context block** injected at the
+>    start of the session, under "Running the ledger scripts". Prefer these.
+> 2. If that block is absent -- which it is in a project with no ledger yet --
+>    the plugin root is **two levels up from this skill's base directory**, the
+>    absolute path given at the top of this file. `scripts/` and `skills/` are
+>    siblings there.
+>
+> Always pass `--project "<absolute project root>"`. The scripts otherwise fall
+> back to the working directory, which the harness can change mid-session, and
+> the ledger would be written somewhere else without any error.
+
+
 Goal: in a few minutes of reading, reach the state a person who has been on this
 project all along would be in — including knowing which obvious-looking ideas
 have already been tried and have already failed.
@@ -17,7 +38,7 @@ have already been tried and have already failed.
    lines. If this file is missing or stale, say so plainly rather than inferring
    the state from code.
 2. `docs/project-memory/INDEX.md` — the generated map of every record. If it is
-   absent or out of date, regenerate it: `python scripts/build_index.py`
+   absent or out of date, regenerate it: `python "<plugin root>/scripts/build_index.py" --project "<project root>"`
 3. **`docs/project-memory/CONSTRAINTS.md`** — the environment and access rules
    that bind the work. Short, and the cheapest file in the ledger to read: each
    entry is something that would otherwise cost an hour to rediscover.

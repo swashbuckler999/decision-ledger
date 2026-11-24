@@ -1,6 +1,6 @@
 # Ledger record templates
 
-These are the exact schemas. `scripts/new_record.py` writes them for you; this
+These are the exact schemas. `new_record.py` writes them for you (see the path note in `SKILL.md`); this
 file is the reference for what each section must contain.
 
 Every record carries YAML frontmatter so the files stay machine-readable for

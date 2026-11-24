@@ -26,7 +26,7 @@ Working skeleton, not yet exercised in anger.
   `ledger-adopt`, `ledger-backfill` — done
 - Five hooks: SessionStart, PreCompact, PostToolUse, Stop, UserPromptSubmit — done
 - Record scaffolding and index generation scripts — done
-- Tests — 241 unit checks (`tests/test_hooks.py`) plus a 23-check
+- Tests — 254 unit checks (`tests/test_hooks.py`) plus a 23-check
   twelve-turn session replay (`tests/simulate_session.py`), no model needed
 - The three adoption situations (fresh / undocumented / documented) —
   simulated against sandbox copies, all three now handled
@@ -42,6 +42,11 @@ Working skeleton, not yet exercised in anger.
 - Installed into a throwaway project and exercised from the installed copy —
   done; 658 tokens always-on per session (ADR-0026)
 - Installed into a real project — **not yet**
+- First live session with the plugin installed — **done** (ADR-0031). Hooks
+  fire, SessionStart context reaches the model, all five skills are visible
+  and `decision-ledger` ran end to end. It also found that every script path
+  in every instruction was unreachable outside this checkout, plus three
+  smaller defects, all now fixed
 - The full write path trialled on copies of three real corpus projects, with
   the originals proved untouched (ADR-0029)
 - Skill *selection* simulated in a fresh context over three rounds; all five
@@ -64,7 +69,7 @@ the user's own words.
 
 ## Immediate next steps
 
-1. Run one interactive session with a working model. Registration is
+1. ~~Run one interactive session.~~ **Done** (ADR-0031). Registration is
    **verified** — `claude plugin details` reports all five skills and all five
    hooks, and every hook was driven from the installed copy and behaved
    (ADR-0026). What is still unproven: that the harness *calls* them during a

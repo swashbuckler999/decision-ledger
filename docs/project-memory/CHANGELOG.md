@@ -59,3 +59,5 @@ carries the reasoning.
 - 2026-11-25 **ADR-0030** Test skill selection against the advertised text - `docs/project-memory/decisions/ADR-0030-test-skill-selection-against-the-advertised-text.md`
 - 2026-11-25 Trialled the full write path on copies of 3 real projects; originals untouched - see ADR-0029
 - 2026-11-25 Rewrote all five skill when_to_use fields after simulating selection - see ADR-0030
+- 2026-11-25 **ADR-0031** Anchor every script path the instructions give - `docs/project-memory/decisions/ADR-0031-anchor-every-script-path-the-instructions-give.md`
+- 2026-11-25 Live session trial: hooks fire, skills invoke, and every script path in every instruction was wrong - see ADR-0031
