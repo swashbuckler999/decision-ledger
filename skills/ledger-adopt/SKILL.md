@@ -172,5 +172,11 @@ Say plainly:
 - Which existing files are now adopted, and that they will only be appended to
 - That no existing content was read into records, so the rejections folder
   starts empty even though the project has surely rejected things before
-- That backfilling rejections from memory is the highest-value thing they can
-  do next, and takes about five minutes per entry
+
+Then hand over to **`ledger-backfill`**, which is the skill for exactly that.
+Adoption maps the ledger onto the files a project keeps; it does not read the
+project's past into records, and a project that has been worked on for months
+has a past whether or not it wrote any of it down.
+
+If the scanner reported `NOT greenfield`, this is not optional — run the
+backfill before new work starts.

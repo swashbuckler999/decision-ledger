@@ -732,6 +732,268 @@ def test_record_scaffolding():
         shutil.rmtree(d, ignore_errors=True)
 
 
+
+def test_record_number_parsing():
+    """Bare-numbered records, and the year trap.
+
+    adr-tools writes 0001-title.md with no prefix at all, so requiring one
+    made the scanner blind to the most common ADR convention there is. The
+    YEAR_FLOOR test is what stops 2026-11-22-notes.md reading as record 2026
+    and pushing the next id to 2027.
+    """
+    print("\nRecord filename parsing")
+    sys.path.insert(0, str(SCRIPTS))
+    import _ledger as L
+    cases = [
+        ("0001-module-boundaries", None, 1),
+        ("ADR-0007-foo", None, 7),
+        ("adr_12-x", None, 12),
+        ("0004", None, 4),
+        ("2026-11-22-notes", None, None),
+        ("1900-x", None, None),
+        ("1899-x", None, 1899),
+        ("readme", None, None),
+        ("notes-on-adr-0005", None, None),
+        ("REJ-0003-x", "ADR", None),
+        ("ADR-0003-x", "ADR", 3),
+    ]
+    for stem, prefix, want in cases:
+        got = L.record_number(stem, prefix)
+        check(f"{stem!r}" + (f" as {prefix}" if prefix else "") + f" -> {want}",
+              got == want, f"got {got}")
+
+
+def test_next_id_continues_adopted_numbering():
+    """The bug this pins: restarting at 0001 beside someone's existing 0001.
+
+    A project with docs/adr/0001..0002 that adopts the ledger must get 0003.
+    Two different decisions filed under one number is worse than a gap.
+    """
+    print("\nAdopted decisions directory")
+    d = make_repo(with_ledger=False)
+    try:
+        adr = d / "docs" / "adr"
+        adr.mkdir(parents=True)
+        for n, name in ((1, "single-threaded-router"), (2, "sqlite-fills")):
+            (adr / f"{n:04d}-{name}.md").write_text(
+                f"# {n}. {name}\n\nDate: 2026-07-10\n", encoding="utf-8")
+        (adr / "README.md").write_text("# ADRs\n", encoding="utf-8")
+        (d / ".ledger.json").write_text(json.dumps({
+            "version": 1,
+            "paths": {"decisions": "docs/adr"},
+            "adopted": ["decisions"],
+            "record_names": "bare",
+        }), encoding="utf-8")
+        commit_all(d)
+
+        env = dict(os.environ, LEDGER_PROJECT_DIR=str(d))
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "new_record.py"), "adr", "Cap slippage"],
+            capture_output=True, text=True, env=env, cwd=d, timeout=30)
+        check("new_record succeeds", out.returncode == 0, out.stderr)
+        created = Path(out.stdout.strip()) if out.stdout.strip() else None
+        check("lands in the adopted directory",
+              created is not None and created.parent == adr,
+              str(created))
+        check("continues their numbering at 0003",
+              created is not None and created.name.startswith("0003-"),
+              created.name if created else "none")
+        check("does not re-use an existing number",
+              created is not None and not created.name.startswith("0001"))
+        check("the id inside the record is still prefixed",
+              created is not None and "id: ADR-0003" in
+              created.read_text(encoding="utf-8"))
+        check("their files are untouched",
+              (adr / "0001-single-threaded-router.md").read_text(encoding="utf-8")
+              == "# 1. single-threaded-router\n\nDate: 2026-07-10\n")
+
+        # The ledger's own folders keep their prefixes: matching a convention
+        # is for fitting into someone else's directory, not restyling ours.
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "new_record.py"), "rej", "Threaded writer"],
+            capture_output=True, text=True, env=env, cwd=d, timeout=30)
+        rej = Path(out.stdout.strip()) if out.stdout.strip() else None
+        check("our own rejection stays REJ-prefixed",
+              rej is not None and rej.name.startswith("REJ-0001-"),
+              rej.name if rej else "none")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_scanner_adopts_unprefixed_adr_dir():
+    """Silence was the real defect: a record directory it did not understand
+    produced no review note at all, so a second decisions folder appeared
+    beside the project's own with nobody told."""
+    print("\nScanner on an unprefixed ADR directory")
+    d = make_repo(with_ledger=False)
+    try:
+        adr = d / "docs" / "adr"
+        adr.mkdir(parents=True)
+        for n in (1, 2, 3, 4):
+            (adr / f"{n:04d}-decision.md").write_text(f"# {n}\n", encoding="utf-8")
+        commit_all(d)
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "scan_project.py"), "--propose", str(d)],
+            capture_output=True, text=True, timeout=60)
+        cfg = json.loads(out.stdout)
+        notes = out.stderr
+        check("points decisions at the existing directory",
+              cfg["paths"]["decisions"] == "docs/adr", cfg["paths"]["decisions"])
+        check("marks decisions adopted", "decisions" in cfg["adopted"])
+        check("records the bare naming convention",
+              cfg.get("record_names") == "bare", str(cfg.get("record_names")))
+        check("says where numbering continues", "0005" in notes, notes)
+        check("does not stay silent about it", "docs/adr" in notes)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_scanner_ignores_its_own_directory():
+    """A project that already has the ledger must not be warned about its own
+    files. Making the review note unconditional introduced exactly that."""
+    print("\nScanner on an already-installed ledger")
+    d = make_repo(with_ledger=True)
+    try:
+        commit_all(d)
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "scan_project.py"), "--propose", str(d)],
+            capture_output=True, text=True, timeout=60)
+        check("no complaint about docs/project-memory",
+              "no numbering this tool recognises" not in out.stderr, out.stderr)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_missing_briefing_warning():
+    """Records can accumulate with no briefing and trip nothing else: writing
+    records *is* touching the ledger, so the unrecorded-change nag stays quiet
+    while the cold-start promise quietly fails."""
+    print("\nMissing briefing")
+    d = make_repo(with_ledger=True)
+    try:
+        state = d / "docs" / "project-memory" / "00-PROJECT-STATE.md"
+        state.unlink()
+        commit_all(d)
+        out, _, code = run_hook("stop_gate.py",
+                                {"cwd": str(d), "stop_hook_active": False},
+                                env={"LEDGER_PROJECT_DIR": str(d)})
+        ctx = context_of(out)
+        check("exits 0", code == 0)
+        check("warns that the briefing is missing", "no briefing file" in ctx, ctx[:200])
+        check("names the record count", "1 ledger record" in ctx, ctx[:200])
+
+        # And stays quiet once it exists.
+        state.write_text("# State\n\nAll good.\n", encoding="utf-8")
+        shutil.rmtree(d / ".git" / "ledger-last-briefing", ignore_errors=True)
+        (d / ".git" / "ledger-last-briefing").unlink(missing_ok=True)
+        out, _, code = run_hook("stop_gate.py",
+                                {"cwd": str(d), "stop_hook_active": False},
+                                env={"LEDGER_PROJECT_DIR": str(d)})
+        check("silent once a briefing exists",
+              "no briefing file" not in context_of(out), context_of(out)[:200])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_history_mining():
+    """Backfill evidence, and the two bugs this found.
+
+    1. str.splitlines() treats \x1e as a line break, so the sentinel-prefixed
+       deletion format was shredded by the call parsing it -- deleted_paths
+       returned [] on every repository while the git query was correct. No
+       repository in the 82-project corpus has a deletion, so nothing caught it.
+    2. Counting "has a body" as a signal flagged 98% of real commits, because
+       in that corpus almost every commit has one.
+    """
+    print("\nHistory mining")
+    sys.path.insert(0, str(SCRIPTS))
+    import mine_history as M
+    d = make_repo(with_ledger=False)
+    try:
+        (d / "keep.py").write_text("x = 1\n", encoding="utf-8")
+        (d / "lstm.py").write_text("y = 2\n", encoding="utf-8")
+        commit_all(d, "Add tick loader")
+        subprocess.run(["git", "rm", "-q", "lstm.py"], cwd=d, check=True,
+                       capture_output=True)
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "commit", "-qm",
+                        "Revert the LSTM experiment\n\nIt overfit on three "
+                        "months and scored worse than the baseline."],
+                       cwd=d, check=True, capture_output=True)
+
+        dele = M.deleted_paths(d)
+        check("finds the deleted file", len(dele) == 1, str(dele))
+        check("names it", dele and dele[0]["path"] == "lstm.py", str(dele))
+        check("carries a date", bool(dele) and dele[0]["date"].startswith("20"),
+              str(dele))
+
+        info = M.scan(d)
+        subjects = {c["subject"].split("\n")[0]: c for c in info["candidates"]}
+        check("flags the revert",
+              any(s.startswith("Revert the LSTM") for s in subjects), str(subjects))
+        rev = next((c for s, c in subjects.items()
+                    if s.startswith("Revert the LSTM")), None)
+        check("as a rejection", rev is not None and rev["kind"] == "rej",
+              str(rev and rev["kind"]))
+        check("skips the mechanical commit",
+              not any(s == "Add tick loader" for s in subjects), str(subjects))
+        check("writes nothing", not (d / "docs").exists())
+
+        # Body weighting is decided per repository, not globally.
+        check("body counts as a signal when bodies are rare",
+              info["body_informative"] is True)
+        many = make_repo(with_ledger=False)
+        try:
+            for i in range(6):
+                (many / f"f{i}.py").write_text("x\n", encoding="utf-8")
+                commit_all(many, f"Change {i}\n\nA body on every commit.")
+            check("body stops being a signal when every commit has one",
+                  M.scan(many)["body_informative"] is False)
+        finally:
+            shutil.rmtree(many, ignore_errors=True)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_scanner_flags_undocumented_history():
+    """A project with months of commits and no notes is not greenfield. If the
+    scanner does not say so, the backfill skill is never discovered and the
+    reasoning behind everything already built stays in the commit log."""
+    print("\nUndocumented working project")
+    d = make_repo(with_ledger=False)
+    try:
+        for i in range(6):
+            (d / f"mod{i}.py").write_text("x = 1\n", encoding="utf-8")
+            commit_all(d, f"Switch module {i} to the new loader")
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "scan_project.py"), "--propose", str(d)],
+            capture_output=True, text=True, timeout=60)
+        check("says it is not greenfield", "NOT greenfield" in out.stderr, out.stderr)
+        check("points at the backfill skill",
+              "ledger-backfill" in out.stderr, out.stderr)
+        check("counts the commits", "6 commits" in out.stderr, out.stderr)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_fresh_project_is_not_told_to_backfill():
+    """The mirror of the test above: a genuinely new project must not be sent
+    to reconstruct a history it does not have."""
+    print("\nFresh project")
+    d = make_repo(with_ledger=False)
+    try:
+        (d / "README.md").write_text("# new\n", encoding="utf-8")
+        commit_all(d, "Initial commit")
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "scan_project.py"), "--propose", str(d)],
+            capture_output=True, text=True, timeout=60)
+        check("no backfill advice", "ledger-backfill" not in out.stderr, out.stderr)
+        check("defaults are proposed",
+              json.loads(out.stdout)["paths"]["changelog"]
+              == "docs/project-memory/CHANGELOG.md")
+        check("nothing adopted", json.loads(out.stdout)["adopted"] == [])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
 def main():
     print("decision-ledger hook tests")
     for t in (test_session_start, test_briefing_without_constraints_file,
@@ -745,7 +1007,15 @@ def main():
               test_role_classification,
               test_refuses_to_rewrite_non_utf8_changelog,
               test_malformed_config_is_not_fatal,
-              test_record_scaffolding):
+              test_record_scaffolding,
+              test_record_number_parsing,
+              test_next_id_continues_adopted_numbering,
+              test_scanner_adopts_unprefixed_adr_dir,
+              test_scanner_ignores_its_own_directory,
+              test_missing_briefing_warning,
+              test_history_mining,
+              test_scanner_flags_undocumented_history,
+              test_fresh_project_is_not_told_to_backfill):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test

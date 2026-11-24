@@ -133,3 +133,27 @@ per inserted line.
 
 Tests cover both CRLF and LF fixtures and assert on byte count, because that
 is the one thing git's normalisation cannot hide.
+
+## 2026-11-24: Python's splitlines() breaks on \x1e, \x1c, \x1d and \x85
+
+`str.splitlines()` treats the C0 separator characters — RECORD SEPARATOR
+`\x1e`, FILE SEPARATOR `\x1c`, GROUP SEPARATOR `\x1d` — and NEL `\x85` as line
+boundaries, not just `\n` and `\r\n`.
+
+This made `mine_history.deleted_paths()` return an empty list on every
+repository while the git query underneath was correct: the format string used
+`\x1e` as a sentinel, and the parse used `splitlines()`, which destroyed the
+sentinel it was looking for.
+
+Parsing `git` output with a sentinel character therefore needs `.split("\n")`,
+never `.splitlines()` — or no sentinel at all, which is what was done: commit
+header lines are matched by their own shape, `^[0-9a-f]{40} \d{4}-\d{2}-\d{2}$`.
+
+Why it went unnoticed: not one of the 82 projects in the corpus has ever
+deleted a file, so the code path returned nothing in every real run and nothing
+distinguished that from working correctly. It was found by building a sandbox
+repository with a deletion in it.
+
+`add_changelog_entry` uses `splitlines(keepends=True)` and is safe, because it
+verifies `before + after == original` before writing and `keepends` preserves
+whatever it split on.

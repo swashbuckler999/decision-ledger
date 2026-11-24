@@ -29,3 +29,8 @@ carries the reasoning.
 - 2026-11-24 **ADR-0012** The scan is mechanical, the mapping is approved - `docs/project-memory/decisions/ADR-0012-the-scan-is-mechanical-the-mapping-is-approved.md`
 - 2026-11-24 **REJ-0007** Publishing the owner's project names - `docs/project-memory/rejections/REJ-0007-publishing-the-owners-project-names.md`
 - 2026-11-24 **ADR-0013** Match adoptable roles strictly, loose roles loosely - `docs/project-memory/decisions/ADR-0013-match-adoptable-roles-strictly.md`
+- 2026-11-24 **ADR-0014** Recognise unprefixed record filenames - `docs/project-memory/decisions/ADR-0014-recognise-unprefixed-record-filenames.md`
+- 2026-11-24 **ADR-0015** Reconstruct a ledger from git history - `docs/project-memory/decisions/ADR-0015-reconstruct-a-ledger-from-git-history.md`
+- 2026-11-24 **ADR-0016** Score mined commits and cap the worklist - `docs/project-memory/decisions/ADR-0016-score-mined-commits-and-cap-the-worklist.md`
+- 2026-11-24 **ADR-0017** Warn when records exist with no briefing - `docs/project-memory/decisions/ADR-0017-warn-when-records-exist-with-no-briefing.md`
+- 2026-11-24 **REJ-0008** Mine every commit that states a reason - `docs/project-memory/rejections/REJ-0008-mine-every-commit-that-states-a-reason.md`

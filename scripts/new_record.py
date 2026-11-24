@@ -141,7 +141,12 @@ def main():
 
     num = L.next_id(kind)
     rid = f"{L.PREFIX[kind]}-{num:04d}"
-    path = folder / f"{rid}-{L.slugify(title)}.md"
+    # The id inside the record stays ADR-0003 so the index and cross-references
+    # are stable; only the filename follows the folder's own convention. A
+    # project using adr-tools has 0001-foo.md, and dropping ADR-0003-foo.md in
+    # beside it is the same visible foreignness the changelog format avoids.
+    stem = (f"{num:04d}" if L.record_name_style(kind) == "bare" else rid)
+    path = folder / f"{stem}-{L.slugify(title)}.md"
     if path.exists():
         print(f"refusing to overwrite existing record {path}", file=sys.stderr)
         return 1

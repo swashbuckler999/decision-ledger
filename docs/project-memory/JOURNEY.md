@@ -102,3 +102,80 @@ What is still not proven is the registration path itself. The command strings
 work; whether Claude Code loads `hooks/hooks.json` from an installed plugin
 and invokes them can only be observed from inside a live session. Until then
 the plugin is well-tested machinery that has never done its actual job.
+
+## 2026-11-24 — simulating the three situations the owner actually named
+
+The owner stopped the publish-and-push track and named the three cases the
+skill has to survive:
+
+> 1. Completely Fresh Project
+> 2. Working Project with no such maintenance: Properly extract whatever
+>    happened till then, properly document them arrange them, and then
+>    structure it properly, and then keep on maintaining. Remember it should be
+>    always cold-start-ready for any other account to pick it up any point of
+>    time.
+> 3. Working Project with already maintained documents almost related to the
+>    Skill: Properly structure and segregate and maintain, and keep on
+>    maintaining.
+
+Three sandbox projects were built with real git history and the actual scripts
+run against them. Nothing real was touched.
+
+**Case 2 had no implementation at all.** The scanner classified an eight-month
+project with nine reasoning-bearing commits as `readme-only`, the ledger opened
+at ADR-0001, and the `ledger-adopt` skill's own closing step admitted it:
+nothing is read into records, and backfilling is left to the user. The
+capability was documented as a gap rather than built. That became
+`ledger-backfill` and `mine_history.py` (ADR-0015).
+
+**Case 3 was silently broken.** The fixture's `docs/adr/0001-….md`,
+`0002-….md` — the `adr-tools` convention, the most widespread one there is —
+failed a regex that required a letter prefix, and because the review note sat
+inside the `if numbered` branch, *nothing was printed*. One real project,
+Trading Tool V2, has exactly that layout. Installing the ledger there would
+have created a second decisions folder beside the first and said nothing
+(ADR-0014). The regex was the visible half; the silence was the defect.
+
+**Case 1 exposed the cheapest gap.** Two records written into a fresh project,
+Stop gate run, silence — and no briefing file anywhere. Correct by the gate's
+logic and a direct failure of the cold-start promise, since writing records
+*is* touching the ledger and so satisfies the only check that might have
+noticed (ADR-0017).
+
+### The route taken and abandoned: loose mining
+
+The first history miner matched loosely, and the argument for it was drawn from
+a decision already accepted here — ADR-0013 sets match strictness by
+consequence, and mining writes nothing, so a false positive costs one line in a
+list. On the fixture it flagged 7 of 10 commits and skipped exactly the
+mechanical three.
+
+Against the corpus it flagged **4,273 of 4,380 commits, 98%**, with a 100%
+match rate in twenty-seven of thirty-eight repositories. The first diagnosis
+was wrong too: the 97% body rate looked like `Co-Authored-By` trailers being
+counted as reasoning, and it is not — those bodies are genuine, because these
+repositories were written under guidelines that demand it. In this corpus a
+message body separates nothing; in a typical project it is the best signal
+there is.
+
+Rejected in REJ-0008 and replaced by scoring with a per-repository body weight
+(ADR-0016). The rule from ADR-0013 was applied correctly and still gave the
+wrong answer, because volume is itself a consequence and the loose tier never
+counted it. 98% → 30%.
+
+This is the second time in this project that a filter validated against
+fixtures written by its own author has been wrong in a way only the corpus
+showed. It is no longer a lesson, it is the procedure.
+
+### A bug hiding behind an empty result
+
+`deleted_paths()` returned `[]` on all 38 git repositories. That looked like
+"no project ever deleted a file", which is in fact true of this corpus, and is
+indistinguishable from broken. A sandbox repository with one deletion showed it
+was broken: `str.splitlines()` treats `\x1e` as a line break, so the sentinel
+in the format string was destroyed by the call parsing it. Recorded in
+CONSTRAINTS.md.
+
+The CRLF bug taught that git normalisation can hide a defect. This one taught
+the quieter version: a code path that returns nothing on all real data is
+untested, not working.

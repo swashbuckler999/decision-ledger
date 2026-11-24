@@ -68,7 +68,9 @@ MEMORY_DIRS = (".ai", "docs/memory", "docs/project-memory", "docs/adr",
                "docs/decisions", "adr", "decisions", "docs/records")
 
 DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
-RECORD_RE = re.compile(r"^(ADR|REJ|CR|RFC|DEC)[-_]?(\d+)", re.I)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _ledger as L  # noqa: E402
+import mine_history  # noqa: E402
 
 
 def role_of(path):
@@ -225,11 +227,13 @@ def record_dir_shape(d):
     files = [p for p in d.glob("*.md") if p.name.lower() != "readme.md"]
     prefixes, widths, highest = set(), set(), 0
     for p in files:
-        m = RECORD_RE.match(p.stem)
-        if m:
-            prefixes.add(m.group(1).upper())
+        m = L.RECORD_STEM_RE.match(p.stem)
+        num = L.record_number(p.stem)
+        if m and num is not None:
+            # No prefix is itself a convention -- adr-tools writes 0001-foo.md.
+            prefixes.add((m.group(1) or "").upper() or "(none)")
             widths.add(len(m.group(2)))
-            highest = max(highest, int(m.group(2)))
+            highest = max(highest, num)
     return {
         "files": len(files),
         "prefixes": sorted(prefixes),
@@ -337,17 +341,46 @@ def propose(root):
             paths[role] = found["path"]
             adopted.append(role)
 
+    # Every directory that holds records gets a line, whether or not its
+    # numbering is understood. Silence here is how a second decisions folder
+    # appears beside someone's existing one with nobody told.
+    # The ledger's own directory is not someone else's record folder. Without
+    # this, a project that already has the ledger installed gets warned about
+    # its own files on every scan.
+    own = {Path(v).parent.as_posix() for v in LEDGER_DEFAULTS.values()}
+    own |= {Path(v).as_posix() for v in LEDGER_DEFAULTS.values()}
+
+    cfg_names = {}
+    claimed = False
     for d in info.get("memory_dirs", []):
-        if d.get("numbered") and d["files"]:
+        if not d["files"] or d["path"] in own:
+            continue
+        if d.get("numbered") and not claimed:
             paths["decisions"] = d["path"]
             adopted.append("decisions")
+            claimed = True
             review.append(
                 f"{d['path']} already holds {d['files']} numbered records "
-                f"(prefixes {d['prefixes'] or 'none'}, highest {d['highest_id']}). "
-                "New records continue that numbering; nothing is renumbered.")
-            break
+                f"(prefixes {', '.join(d['prefixes'])}, highest {d['highest_id']}). "
+                f"Adopted: new decisions continue at "
+                f"{d['highest_id'] + 1:04d}; nothing is renumbered.")
+            if d["prefixes"] == ["(none)"]:
+                cfg_names["record_names"] = "bare"
+                review.append(
+                    f"{d['path']} names records without a letter prefix "
+                    "(adr-tools style), so new ones match: "
+                    f"{d['highest_id'] + 1:04d}-title.md. The id inside each "
+                    "record is still ADR-NNNN.")
+        else:
+            review.append(
+                f"{d['path']} holds {d['files']} file(s) with no numbering this "
+                "tool recognises. NOT adopted -- decisions default to "
+                f"{LEDGER_DEFAULTS['decisions']}. Check it by hand: if those are "
+                "records, point `paths.decisions` at that directory instead, or "
+                "you will end up with two decision folders.")
 
     cfg = {"version": 1, "paths": paths, "adopted": sorted(set(adopted))}
+    cfg.update(cfg_names)
 
     cl = info["files"].get("changelog")
     if cl:
@@ -384,6 +417,24 @@ def propose(root):
         review.append(
             "Not a git repository: the Stop hook and orphan detection stay "
             "silent here, because both compare against committed history.")
+
+    # A project with months of commits and no notes is not greenfield, however
+    # empty its docs directory looks. Treating it as greenfield is how the
+    # reasoning behind everything already built gets left in the commit log
+    # where no future session will look for it.
+    if info["is_git"] and not (set(info["files"]) - {"readme"}):
+        try:
+            hist = mine_history.scan(root)
+        except Exception:
+            hist = None
+        if hist and hist["total_commits"] >= 5:
+            review.append(
+                f"No memory files, but {hist['total_commits']} commits exist "
+                f"({hist['first_commit']} to {hist['last_commit']}) and "
+                f"{hist['matched']} of them carry evidence worth a record. "
+                "This project is NOT greenfield. Run the `ledger-backfill` "
+                "skill before starting new work, or everything decided so far "
+                "stays invisible to the next session.")
 
     return cfg, review
 

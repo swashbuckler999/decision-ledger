@@ -24,6 +24,10 @@ What was chosen, and why.
 | [ADR-0011](decisions/ADR-0011-defaults-come-from-the-corpus-not-intuition.md) | Defaults come from the corpus, not intuition | accepted | 2026-11-24 |
 | [ADR-0012](decisions/ADR-0012-the-scan-is-mechanical-the-mapping-is-approved.md) | The scan is mechanical, the mapping is approved | accepted | 2026-11-24 |
 | [ADR-0013](decisions/ADR-0013-match-adoptable-roles-strictly.md) | Match adoptable roles strictly, loose roles loosely | accepted | 2026-11-24 |
+| [ADR-0014](decisions/ADR-0014-recognise-unprefixed-record-filenames.md) | Recognise unprefixed record filenames | accepted | 2026-11-24 |
+| [ADR-0015](decisions/ADR-0015-reconstruct-a-ledger-from-git-history.md) | Reconstruct a ledger from git history | accepted | 2026-11-24 |
+| [ADR-0016](decisions/ADR-0016-score-mined-commits-and-cap-the-worklist.md) | Score mined commits and cap the worklist | accepted | 2026-11-24 |
+| [ADR-0017](decisions/ADR-0017-warn-when-records-exist-with-no-briefing.md) | Warn when records exist with no briefing | accepted | 2026-11-24 |
 
 
 ## Rejections
@@ -39,6 +43,7 @@ Settled arguments. **Read these before proposing anything new.**
 | [REJ-0005](rejections/REJ-0005-run-the-ledger-on-a-cheaper-model.md) | Run the ledger on a cheaper model, in a subagent | rejected | 2026-11-24 |
 | [REJ-0006](rejections/REJ-0006-migrate-existing-docs-into-records.md) | Migrate existing documents into ledger records | rejected | 2026-11-24 |
 | [REJ-0007](rejections/REJ-0007-publishing-the-owners-project-names.md) | Publishing the owner's project names | rejected | 2026-11-24 |
+| [REJ-0008](rejections/REJ-0008-mine-every-commit-that-states-a-reason.md) | Mine every commit that states a reason | rejected | 2026-11-24 |
 
 
 ## Change requests

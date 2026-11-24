@@ -53,6 +53,35 @@ The previous version remains in git until the working tree is committed.
 """
 
 
+BRIEFING_MESSAGE = """This project has {n} ledger record(s) but no briefing file ({state}).
+
+The briefing is the cold-start entry point: without it, someone arriving with
+no memory of this work has to read every record to find out where things
+stand, and a new session will say the state is unknown.
+
+Write it now -- current state, what is in progress, what is blocked, the next
+step, and pointers to the fuller files. Keep it under {cap} lines.
+"""
+
+
+def missing_briefing_warning(cwd, payload):
+    """Records accumulating with no briefing.
+
+    Checked on its own because the other two warnings cannot see it: writing
+    records *is* touching the ledger, so a project can fill up with records,
+    never trip anything, and still fail the one promise this plugin makes.
+    """
+    if L.path_for("briefing", payload).is_file():
+        return None
+    n = sum(len(L.records(k, payload)) for k in L.KIND_KEY)
+    if not n:
+        return None  # nothing recorded yet; nothing to brief
+    if already_reported(cwd, "last-briefing", str(n)):
+        return None
+    return BRIEFING_MESSAGE.format(
+        n=n, state=L.path_for("briefing", payload).name, cap=L.STATE_MAX_LINES)
+
+
 def changed_files(cwd):
     try:
         out = subprocess.run(
@@ -139,6 +168,7 @@ def body():
         return  # not a git repo, or git unavailable: stay quiet
 
     warnings = [w for w in (orphan_warning(cwd),
+                            missing_briefing_warning(cwd, payload),
                             unrecorded_warning(cwd, files, payload)) if w]
     if not warnings:
         return

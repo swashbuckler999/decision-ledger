@@ -132,3 +132,63 @@ positives dropped; the one genuine session journal among them was kept.
 The general lesson: the first pass validated the scanner against the question
 it was built to answer and missed a defect elsewhere in the same scan.
 Re-running a corpus after a fix is not ceremony.
+
+## A third pass, simulating the three real situations
+
+The adoption design was then tested by simulation rather than by scanning:
+three sandbox projects with real git history — fresh, undocumented, documented
+— with the actual scripts run against them. Two defects surfaced that two
+corpus passes had not.
+
+### An ADR directory the scanner could not see
+
+Record filenames were matched by `^(ADR|REJ|CR|RFC|DEC)[-_]?(\d+)`, requiring a
+letter prefix. `adr-tools`, the original and most widespread ADR tooling, writes
+`0001-title.md` with no prefix. One project in the corpus uses exactly that,
+with four records, and the scanner reported `numbered: false` and — because the
+review note sat inside the `if numbered` branch — printed nothing at all.
+
+Adoption there would have created a second decisions folder beside the first
+and filed a new decision as `0001` next to the existing `0001`.
+
+Both halves were wrong, and the silence was the worse half. A mapping the tool
+cannot determine is acceptable; one it cannot determine and does not mention is
+how the duplication it exists to prevent happens anyway. Review notes are now
+emitted for every directory holding records, understood or not.
+
+### Mining history: 98% is not a filter
+
+A project with months of commits and no notes was being classified as
+greenfield. The history miner built for it matched loosely, on the reasoning
+that mining writes nothing so a false positive is cheap.
+
+| Version | Commits flagged, of 4,380 |
+|---|---|
+| Loose filter | **4,273 (98%)** |
+| Scored, threshold 2, capped | 1,327 (30%) |
+
+The dominant signal was "has a message body", true of 4,238 commits — 97%. The
+first explanation was that `Co-Authored-By` trailers were being counted as
+reasoning. They were not: those bodies are genuine, substantive reasoning,
+because these repositories were written under guidelines requiring it.
+
+That is the finding worth keeping. **In this corpus a commit body carries no
+information; in a typical repository it is the single best indicator that
+reasoning was written down at the time.** A fixed weight cannot be right for
+both, so the weight is now decided per repository from its own body rate.
+
+Per-project worklists went from 100% in twenty-seven of thirty-eight
+repositories to a median in single digits, capped at 40.
+
+### A bug behind an empty result
+
+Not one of the 82 projects has ever deleted a file. The function that looks for
+deleted files — abandoned routes, the clearest evidence of work thrown away —
+therefore returned an empty list on every real run, which was indistinguishable
+from it working. A sandbox repository with one deletion showed it was broken:
+`str.splitlines()` treats `\x1e` as a line boundary, so the sentinel in the git
+format string was destroyed by the call parsing it.
+
+The CRLF bug showed that git's own normalisation can hide a defect in review.
+This is the quieter version: a code path that returns nothing across all
+available real data is untested, not working.

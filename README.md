@@ -36,7 +36,7 @@ are real: they are the design history of the thing you are reading about.
 
 ## What is in the box
 
-### Three skills
+### Five skills
 
 | Skill | What it does |
 |---|---|
@@ -44,6 +44,16 @@ are real: they are the design history of the thing you are reading about.
 | `cold-start` | Briefs you on a project you have no memory of |
 | `wrap-session` | Flushes unrecorded reasoning before the context is lost |
 | `ledger-adopt` | Fits the ledger around a project that already keeps notes |
+| `ledger-backfill` | Reconstructs the ledger for a project that kept none |
+
+Which one you start with depends on what the project already has, and
+`python scripts/scan_project.py --propose .` will tell you:
+
+| The project | Start with |
+|---|---|
+| New, or nearly | nothing — just work, and `decision-ledger` records as you go |
+| Months of commits, no notes | `/ledger-backfill` **first** |
+| Keeps its own CHANGELOG, STATUS or `docs/adr/` | `/ledger-adopt` |
 
 ### Five hooks
 
@@ -87,6 +97,24 @@ a superseded decision keeps its file and gains a pointer to the one that
 replaced it. A script checks this rather than trusting it: `check_state.py`
 reports any line dropped from the state file that exists nowhere else, and the
 Stop hook runs it every turn.
+
+### Adopting it into a working project that kept no notes
+
+Run `/ledger-backfill`. A project with eight months of commits and no notes is
+not a new project, and treating it as one leaves every decision already made
+sitting in the commit log where no future session will look for it.
+
+`mine_history.py` scores the history for evidence — commits that undo earlier
+work, that carry written reasoning, that name an environment limit — ranks the
+strongest and caps the list at a sitting's worth. The skill then drafts records
+from that evidence, and the rule it works under is strict: **a reconstructed
+record may never state a reason the evidence does not support.** Each one
+carries the commits it came from and whether its reasoning was `stated`,
+`inferred` or `unconfirmed`, and is dated to the commit rather than to today.
+
+The part no script can do: work you *considered and did not do* leaves no
+commit at all. The skill asks you for those directly, and three or four of them
+are worth more than everything it reconstructs on its own.
 
 ### Adopting it into a project that already keeps notes
 
@@ -153,9 +181,14 @@ of system-wide installation, are in **[docs/INSTALL.md](docs/INSTALL.md)**.
 
 The adoption rules are not guesswork. They were built against a corpus of 82
 real projects: 45% of them already kept notes, 20 of 26 changelogs were
-newest-first, and all 26 used `##` headings rather than bullets. Three of this
+newest-first, and all 26 used `##` headings rather than bullets. Several of this
 plugin's own defaults were wrong and were corrected from that data — see
 [docs/corpus-survey.md](docs/corpus-survey.md).
+
+The same corpus is used as a test, not just a reference. It has twice shown a
+filter to be badly wrong after it passed every hand-written fixture: once for
+file-role matching, once for history mining, where a rule that looked right
+flagged 98% of all real commits.
 
 ## Requirements
 
@@ -185,6 +218,8 @@ Mostly you do not. The hooks fire on their own, and the agent invokes
 `decision-ledger` when a decision appears. Three things are worth doing by hand:
 
 - `/cold-start` — when picking up a project you do not remember
+- `python scripts/mine_history.py . --summary` — what your history still holds
+  that the ledger does not
 - `/wrap-session` — before you stop for the day
 - `python scripts/check_state.py` — lists anything dropped from the state file
   that exists nowhere else; the Stop hook runs it for you every turn

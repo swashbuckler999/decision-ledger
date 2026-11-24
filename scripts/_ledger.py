@@ -12,6 +12,7 @@ ever moved, reformatted or overwritten -- see ADR-0008 and ADR-0009.
 
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -151,18 +152,67 @@ def records(kind, payload=None):
     return sorted(p for p in d.glob("*.md") if p.name != "README.md")
 
 
+# A record filename, with or without a letter prefix. `adr-tools` -- by far the
+# most widespread ADR convention -- writes `0001-module-boundaries.md` with no
+# prefix at all, so a prefix cannot be required.
+#
+# The `< YEAR_FLOOR` test is what keeps a bare number from matching a date.
+# `2026-11-22-notes.md` would otherwise read as record 2026 and push the next
+# id to 2027. No project has 1,900 decision records; many have filenames that
+# begin with a year.
+YEAR_FLOOR = 1900
+RECORD_STEM_RE = re.compile(
+    r"^(?:(ADR|REJ|CR|RFC|DEC)[-_]?)?(\d{1,4})(?:[-_]|$)", re.I)
+
+
+def record_number(stem, prefix=None):
+    """The numeric id in a record filename, or None if it is not one.
+
+    `prefix` restricts the match to one kind. A bare-numeric name has no kind,
+    so it counts towards whatever kind owns the directory it sits in -- which
+    is the point: an adopted `docs/adr` holding 0001..0004 must make the next
+    decision 0005, not 0001 again.
+    """
+    m = RECORD_STEM_RE.match(stem)
+    if not m:
+        return None
+    found, digits = m.group(1), int(m.group(2))
+    if found is None:
+        return digits if digits < YEAR_FLOOR else None
+    if prefix and found.upper() != prefix.upper():
+        return None
+    return digits
+
+
+def record_name_style(kind=None, payload=None):
+    """"prefixed" (ADR-0003-title.md) or "bare" (0003-title.md).
+
+    Set by the adoption scanner from what the existing folder already does,
+    and applied ONLY to a record kind whose folder was adopted. The ledger's
+    own folders keep the prefixed names regardless: matching a convention is
+    for fitting into someone else's directory, not for restyling ours.
+    """
+    style = (config(payload).get("record_names") or "prefixed").lower()
+    if style != "bare":
+        return "prefixed"
+    if kind is not None and not is_adopted(KIND_KEY[kind], payload):
+        return "prefixed"
+    return "bare"
+
+
 def next_id(kind, payload=None):
     """Next free numeric id for a record kind. Scans rather than counts, so a
-    deleted or manually added file cannot cause a collision."""
+    deleted or manually added file cannot cause a collision.
+
+    Counts the project's own unprefixed records too. Restarting at 0001 beside
+    someone's existing 0001 puts two different decisions under one number,
+    which is worse than a gap in the sequence.
+    """
     highest = 0
-    pre = PREFIX[kind] + "-"
     for p in records(kind, payload):
-        stem = p.stem
-        if not stem.upper().startswith(pre):
-            continue
-        digits = stem[len(pre):].split("-")[0]
-        if digits.isdigit():
-            highest = max(highest, int(digits))
+        num = record_number(p.stem, PREFIX[kind])
+        if num is not None:
+            highest = max(highest, num)
     return highest + 1
 
 
