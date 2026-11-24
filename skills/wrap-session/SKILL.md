@@ -63,9 +63,24 @@ remove it. Dropping the last copy of something from a mutable file is silent:
 nothing errors, nothing warns, and the loss is only discovered when someone
 rediscovers the fact the hard way.
 
+To check rather than trust your judgement:
+
+```
+python scripts/check_state.py
+```
+
+It compares the state file against its last committed version and lists lines
+that were removed and exist nowhere else in the ledger. It errs toward false
+positives — rewording a line may flag it — so read what it reports rather than
+acting on the exit code alone.
+
 Then rewrite the file so it describes reality now — what is done, in progress,
 blocked, and next. Keep it under 150 lines by moving detail out into records
 and leaving pointers, never by deleting.
+
+If the state file was written by someone else and uses different sections,
+keep their structure. Update the content within it; do not convert it to this
+skill's layout.
 
 ### 5. Append to the journey
 

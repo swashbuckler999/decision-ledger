@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _ledger as L  # noqa: E402
+import check_state  # noqa: E402
 
 LEDGER_PREFIX = L.LEDGER_DIRNAME.as_posix()
 
@@ -33,6 +34,22 @@ with the `decision-ledger` skill. One record per decision.
 
 If it was purely mechanical -- a rename, a typo, a formatting pass -- no record
 is needed and you can ignore this.
+"""
+
+ORPHAN_MESSAGE = """\
+Content was removed from {state} and exists nowhere else in the ledger:
+
+{orphans}
+
+{state} is the only mutable file here, so this content has no other copy. If it
+still matters, write it somewhere append-only before the change is committed:
+
+  a constraint or access rule     -> {constraints}
+  a decision, rejection or change -> a numbered record
+  narrative, or an open question  -> {journey}
+
+If it is genuinely obsolete, removing it is correct and you can ignore this.
+The previous version remains in git until the working tree is committed.
 """
 
 
@@ -56,6 +73,59 @@ def changed_files(cwd):
     return files
 
 
+def already_reported(cwd, key, digest):
+    """Report once per distinct situation, not once per turn."""
+    marker = cwd / ".git" / f"ledger-{key}"
+    try:
+        if marker.is_file() and marker.read_text(encoding="utf-8").strip() == digest:
+            return True
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(digest, encoding="utf-8")
+    except Exception:
+        pass  # the marker is an optimisation, not a requirement
+    return False
+
+
+def digest_of(items):
+    return hashlib.sha256("\n".join(sorted(items)).encode()).hexdigest()[:16]
+
+
+def orphan_warning(cwd):
+    """Content dropped from the state file with no copy anywhere else.
+
+    Checked independently of the code-change nag below: editing the state file
+    counts as touching the ledger, so the two must not suppress each other --
+    the state file is exactly where silent loss happens.
+    """
+    try:
+        orphans, _ = check_state.find_orphans(cwd)
+    except Exception:
+        return None
+    if not orphans:
+        return None
+    if already_reported(cwd, "last-orphans", digest_of(orphans)):
+        return None
+    listing = "\n".join(f"  {line}" for line in orphans[:15])
+    if len(orphans) > 15:
+        listing += f"\n  ...and {len(orphans) - 15} more"
+    return ORPHAN_MESSAGE.format(state=L.STATE_FILE, orphans=listing,
+                                 constraints=L.CONSTRAINTS_FILE,
+                                 journey=L.JOURNEY_FILE)
+
+
+def unrecorded_warning(cwd, files):
+    ledger_touched = [f for f in files if f.startswith(LEDGER_PREFIX)]
+    code_touched = [f for f in files if not f.startswith(LEDGER_PREFIX)]
+    if not code_touched or ledger_touched:
+        return None
+    if already_reported(cwd, "last-nag", digest_of(code_touched)):
+        return None
+    listing = "\n".join(f"  {f}" for f in code_touched[:20])
+    if len(code_touched) > 20:
+        listing += f"\n  ...and {len(code_touched) - 20} more"
+    return MESSAGE.format(changed=listing)
+
+
 def body():
     payload = L.read_hook_input()
     if payload.get("stop_hook_active"):
@@ -68,26 +138,10 @@ def body():
     if files is None:
         return  # not a git repo, or git unavailable: stay quiet
 
-    ledger_touched = [f for f in files if f.startswith(LEDGER_PREFIX)]
-    code_touched = [f for f in files if not f.startswith(LEDGER_PREFIX)]
-    if not code_touched or ledger_touched:
+    warnings = [w for w in (orphan_warning(cwd), unrecorded_warning(cwd, files)) if w]
+    if not warnings:
         return
-
-    # Nag once per distinct change set, not once per turn.
-    digest = hashlib.sha256("\n".join(sorted(code_touched)).encode()).hexdigest()[:16]
-    marker = cwd / ".git" / "ledger-last-nag"
-    try:
-        if marker.is_file() and marker.read_text(encoding="utf-8").strip() == digest:
-            return
-        marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.write_text(digest, encoding="utf-8")
-    except Exception:
-        pass  # marker is an optimisation, not a requirement
-
-    listing = "\n".join(f"  {f}" for f in code_touched[:20])
-    if len(code_touched) > 20:
-        listing += f"\n  ...and {len(code_touched) - 20} more"
-    text = MESSAGE.format(changed=listing)
+    text = "\n\n".join(warnings)
 
     if os.environ.get("LEDGER_STRICT") == "1":
         print(json.dumps({"decision": "block", "reason": text}))

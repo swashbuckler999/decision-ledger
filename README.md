@@ -83,7 +83,18 @@ that would make this the wrong call.
 `00-PROJECT-STATE.md` is the **only** mutable file, and nothing is allowed to
 exist solely inside it. Everything else is append-only and is never deleted —
 a superseded decision keeps its file and gains a pointer to the one that
-replaced it.
+replaced it. A script checks this rather than trusting it: `check_state.py`
+reports any line dropped from the state file that exists nowhere else, and the
+Stop hook runs it every turn.
+
+### Adopting it into a project that already keeps notes
+
+Nothing here overwrites a file it did not create. `build_index.py` refuses to
+touch an `INDEX.md` it did not generate, records are never overwritten, and the
+skills are instructed to append to existing `CHANGELOG.md`, `JOURNEY.md` and
+`CONSTRAINTS.md` files in whatever style is already there — not to reformat,
+reorder or deduplicate them. If your project already maintains these files by
+hand, the ledger adds to them.
 
 ---
 
@@ -152,6 +163,8 @@ Mostly you do not. The hooks fire on their own, and the agent invokes
 
 - `/cold-start` — when picking up a project you do not remember
 - `/wrap-session` — before you stop for the day
+- `python scripts/check_state.py` — lists anything dropped from the state file
+  that exists nowhere else; the Stop hook runs it for you every turn
 - `python scripts/build_index.py` — after adding records outside the skill
 
 Set `LEDGER_STRICT=1` to make the Stop hook block instead of remind. It is off

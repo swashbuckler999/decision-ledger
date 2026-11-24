@@ -224,6 +224,94 @@ def test_stop_gate_untracked_regression():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_orphan_detection():
+    """Content dropped from the mutable state file with no copy elsewhere."""
+    print("\nState-file orphan detection")
+    d = make_repo()
+    try:
+        lm = d / "docs" / "project-memory"
+        (lm / "00-PROJECT-STATE.md").write_text(
+            "# State\n\n## Constraints\n\n"
+            "- Deploys require the corporate VPN to be connected first\n"
+            "- The staging database resets every Sunday at midnight\n",
+            encoding="utf-8")
+        commit_all(d)
+
+        # Drop one line to an append-only file, delete the other outright.
+        (lm / "CONSTRAINTS.md").write_text(
+            "# Constraints\n\n## Deploys require the corporate VPN "
+            "to be connected first\n", encoding="utf-8")
+        (lm / "00-PROJECT-STATE.md").write_text(
+            "# State\n\n## Constraints\n\nSee CONSTRAINTS.md\n", encoding="utf-8")
+
+        env = dict(os.environ, LEDGER_PROJECT_DIR=str(d))
+        r = subprocess.run([sys.executable, str(SCRIPTS / "check_state.py")],
+                           capture_output=True, text=True, env=env,
+                           cwd=str(d), timeout=30)
+        check("exits 1 when something was orphaned", r.returncode == 1, r.stdout[:120])
+        check("flags the line that went nowhere",
+              "staging database resets" in r.stdout, r.stdout[:200])
+        check("does not flag the line that was moved to CONSTRAINTS.md",
+              "corporate VPN" not in r.stdout, r.stdout[:200])
+
+        # Now move the second line too; nothing should be orphaned.
+        with (lm / "CONSTRAINTS.md").open("a", encoding="utf-8") as fh:
+            fh.write("\n## The staging database resets every Sunday at midnight\n")
+        r2 = subprocess.run([sys.executable, str(SCRIPTS / "check_state.py")],
+                            capture_output=True, text=True, env=env,
+                            cwd=str(d), timeout=30)
+        check("exits 0 once everything is preserved", r2.returncode == 0, r2.stdout[:200])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_index_refuses_to_clobber():
+    """A hand-written INDEX.md must survive a build_index run."""
+    print("\nIndex clobber guard")
+    d = make_repo()
+    try:
+        lm = d / "docs" / "project-memory"
+        handwritten = "# My own index\n\nNotes I maintain by hand.\n"
+        (lm / "INDEX.md").write_text(handwritten, encoding="utf-8")
+        env = dict(os.environ, LEDGER_PROJECT_DIR=str(d))
+
+        r = subprocess.run([sys.executable, str(SCRIPTS / "build_index.py")],
+                           capture_output=True, text=True, env=env, timeout=30)
+        check("refuses to overwrite a foreign index", r.returncode == 1)
+        check("says why", "refusing to overwrite" in r.stderr, r.stderr[:120])
+        check("leaves the file untouched",
+              (lm / "INDEX.md").read_text(encoding="utf-8") == handwritten)
+
+        # Its own generated index may be replaced.
+        (lm / "INDEX.md").unlink()
+        r2 = subprocess.run([sys.executable, str(SCRIPTS / "build_index.py")],
+                            capture_output=True, text=True, env=env, timeout=30)
+        check("generates when absent", r2.returncode == 0, r2.stderr[:120])
+        r3 = subprocess.run([sys.executable, str(SCRIPTS / "build_index.py")],
+                            capture_output=True, text=True, env=env, timeout=30)
+        check("regenerates its own output", r3.returncode == 0, r3.stderr[:120])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_new_record_refuses_to_clobber():
+    """Record files are never overwritten, even on an id collision."""
+    print("\nRecord clobber guard")
+    d = make_repo()
+    try:
+        lm = d / "docs" / "project-memory"
+        existing = lm / "rejections" / "REJ-0001-use-mongodb.md"
+        original = existing.read_text(encoding="utf-8")
+        env = dict(os.environ, LEDGER_PROJECT_DIR=str(d))
+        subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"), "rej",
+                        "Use MongoDB"], capture_output=True, text=True,
+                       env=env, timeout=30)
+        check("existing record is unchanged",
+              existing.read_text(encoding="utf-8") == original)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_record_scaffolding():
     print("\nRecord scaffolding")
     d = make_repo()
@@ -265,7 +353,9 @@ def main():
     for t in (test_session_start, test_briefing_without_constraints_file,
               test_silent_without_ledger, test_pre_compact,
               test_prompt_classifier, test_stop_gate,
-              test_stop_gate_untracked_regression, test_record_scaffolding):
+              test_stop_gate_untracked_regression, test_orphan_detection,
+              test_index_refuses_to_clobber, test_new_record_refuses_to_clobber,
+              test_record_scaffolding):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test

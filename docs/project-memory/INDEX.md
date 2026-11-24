@@ -17,6 +17,8 @@ What was chosen, and why.
 | [ADR-0004](decisions/ADR-0004-separate-namespaces-for-adr-rej-and-cr.md) | Separate namespaces for decisions, rejections and change requests | accepted | 2026-11-24 |
 | [ADR-0005](decisions/ADR-0005-state-file-hand-maintained-and-capped.md) | State file is hand-maintained and capped at 150 lines | accepted | 2026-11-24 |
 | [ADR-0006](decisions/ADR-0006-constraints-get-their-own-append-only-file.md) | Constraints get their own append-only file | accepted | 2026-11-24 |
+| [ADR-0007](decisions/ADR-0007-mechanical-check-for-state-file-loss.md) | Mechanical check for state-file loss | accepted | 2026-11-24 |
+| [ADR-0008](decisions/ADR-0008-never-overwrite-a-file-we-did-not-write.md) | Never overwrite a file we did not write | accepted | 2026-11-24 |
 
 
 ## Rejections

@@ -14,6 +14,31 @@ considered and discarded, and why**.
 
 A record that states only the conclusion has failed. The reasoning is the asset.
 
+## The first rule: append, never rewrite
+
+Someone may already be keeping these files. A project you are installed into
+may have its own `CHANGELOG.md`, its own `JOURNEY.md`, its own conventions,
+maintained by hand over years.
+
+**Never rewrite a ledger file you did not create in this session.** Add to the
+end of it, matching the style already there. Specifically:
+
+- `CHANGELOG.md`, `JOURNEY.md`, `CONSTRAINTS.md` — append only, always. Do not
+  reformat, reorder, deduplicate or "clean up" existing entries, however
+  inconsistent they look. Someone chose that format.
+- Numbered records — create new files. Never overwrite an existing one. The
+  only edit permitted to an existing record is appending under
+  `## Diversions & Pivots`, or changing `status` when it is superseded.
+- `00-PROJECT-STATE.md` — the one file meant to be rewritten, and therefore the
+  one place content can be lost. Before removing a line, confirm it exists
+  somewhere append-only. See the table in the `wrap-session` skill.
+- `INDEX.md` — generated. If it exists without the generator's marker line,
+  someone wrote it by hand: leave it alone and say so.
+
+If an existing file's structure does not match this skill's templates, adapt to
+it rather than converting it. A ledger that loses a year of someone's notes to
+a formatting preference has destroyed more than it will ever record.
+
 ## The four record types
 
 | Type | ID | Folder | What it is |

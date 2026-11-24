@@ -19,3 +19,5 @@ carries the reasoning.
 - 2026-11-24 **REJ-0005** Run the ledger on a cheaper model, in a subagent - `docs/project-memory/rejections/REJ-0005-run-the-ledger-on-a-cheaper-model.md`
 - 2026-11-24 Published to https://github.com/swashbuckler999/decision-ledger (public)
 - 2026-11-24 **ADR-0006** Constraints get their own append-only file - `docs/project-memory/decisions/ADR-0006-constraints-get-their-own-append-only-file.md`
+- 2026-11-24 **ADR-0007** Mechanical check for state-file loss - `docs/project-memory/decisions/ADR-0007-mechanical-check-for-state-file-loss.md`
+- 2026-11-24 **ADR-0008** Never overwrite a file we did not write - `docs/project-memory/decisions/ADR-0008-never-overwrite-a-file-we-did-not-write.md`
