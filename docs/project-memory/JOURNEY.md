@@ -623,3 +623,59 @@ implying otherwise invites someone to add the section to make it true.
 
 None of these are testable. They are instructions, which is exactly why two
 live sessions found them and 254 checks did not.
+
+## 2026-11-25 — the third live session: both skills work, five more defects
+
+`cold-start` and `wrap-session` had never been invoked by anything. Both did
+what they claim. `cold-start` oriented a session that had never seen the
+project, from the ledger rather than the code. `wrap-session` found the
+unrecorded decision from earlier in the session **on its own** and wrote
+ADR-0002 for it. That is the headline promise demonstrated end to end by an
+agent with no memory of the work.
+
+It also found five defects, and the shape of them is the interesting part.
+
+**The Stop hook was crying wolf.** It flagged an editor settings file the
+session had never written to — untracked before the session began, proved by
+its own opening `git status`. The gate measures *what is not committed* and
+reports it as *what you changed and did not record*. On a fixture those are
+the same list. On a real working tree every untracked file appears at the end
+of every session, forever, and the reminder that matters looks exactly like
+the ones that do not. REJ-0004 rejected a blocking hook because a wall gets
+the plugin uninstalled; this was the same failure arriving quietly. Fixed with
+a session baseline (ADR-0033).
+
+**Three instructions assumed every ledger file already exists.** The worst
+inverted a skill's purpose: `wrap-session`'s table is headed "where it must
+already exist", and the session was holding an endpoint pin that lived only in
+the mutable state file with no `CONSTRAINTS.md` to move it to. Read literally,
+the table forbids the move — so the one fact the table exists to rescue was
+stranded in the one file that gets rewritten. The session refused to delete it
+and reported the contradiction, which is exactly right.
+
+`cold-start` had the same assumption about `CONSTRAINTS.md`, and a report
+shape ending "nothing longer" that left no room for the honesty its own rules
+demand — it found the state file promising a Parquet writer the code did not
+have, and had nowhere to put that. And `wrap-session` never said whether to
+commit, so the session fell back on a convention it found elsewhere.
+
+This is the third appearance of "assumes the file exists" after ADR-0032. All
+of it was written while looking at this repository, where every ledger file
+has existed since the first week. **The author's own project is the worst
+reference for instructions about a project that has nothing yet.**
+
+### A sixth thing, found here rather than there
+
+The concurrency test failed once in about seven full-suite runs and never in
+six isolated trials — load-sensitive. Rather than guess at a fix with no
+evidence, the test now reports the full stderr of a failing run instead of a
+120-character tail, because the previous failure wasted the one chance to see
+what happened.
+
+### The pattern, stated plainly
+
+Three live sessions, three sets of defects, no sign of the rate dropping. The
+code is well covered — 263 checks and a session replay. The 660 lines of
+instructions wrapped around it are still being read for the first time by
+someone other than the person who wrote them, and every reading has found
+something.

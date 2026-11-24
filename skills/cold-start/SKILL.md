@@ -41,11 +41,16 @@ have already been tried and have already failed.
    absent or out of date, regenerate it: `python "<plugin root>/scripts/build_index.py" --project "<project root>"`
 3. **`docs/project-memory/CONSTRAINTS.md`** — the environment and access rules
    that bind the work. Short, and the cheapest file in the ledger to read: each
-   entry is something that would otherwise cost an hour to rediscover.
+   entry is something that would otherwise cost an hour to rediscover. If the
+   file does not exist, note that in your report and move on. Several of these
+   files only appear once there is something to put in them, and an absent one
+   is a gap to mention, never a reason to stop or to create it empty.
 4. **Every file in `docs/project-memory/rejections/`** — titles at minimum, and
    the "Why it was rejected" section of any that touch what you are about to
    work on. This step is not optional and not skippable for speed. Skipping it is
-   how a settled argument gets re-opened.
+   how a settled argument gets re-opened. An empty or missing folder is a valid
+   finding -- report it, because a project with no recorded rejections has lost
+   that history rather than never having any.
 5. Accepted ADRs relevant to the area you are touching. You do not need all of
    them; you do need the ones that bind the files you will edit.
 6. `docs/project-memory/JOURNEY.md` — the last few entries, for narrative and
@@ -54,7 +59,9 @@ have already been tried and have already failed.
 
 ## Then report back
 
-Give the user, in this shape and nothing longer:
+Give the user, in this shape. Keep it short, but never drop a
+section to stay short -- an omission the reader cannot see is worse than a
+longer report:
 
 - **Where it stands** — two or three sentences from the state file
 - **What is settled** — the accepted decisions that constrain the work ahead
@@ -62,6 +69,12 @@ Give the user, in this shape and nothing longer:
   user can see you will not re-propose them
 - **What is open** — unresolved questions and anything marked unverified
 - **Next step** — what the state file says comes next
+- **What the ledger does not cover** — leave this out when there is nothing to
+  say, and never leave it out when there is. Missing files, a state file that
+  contradicts the code, anything you had to infer. The honesty rules below
+  require this and the shape above has no other place for it: a live session
+  found the state file promising a writer the code did not have, and had
+  nowhere to put it.
 
 ## Honesty rules
 

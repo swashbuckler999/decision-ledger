@@ -80,7 +80,12 @@ check every line you are about to drop:
 | Narrative — what was tried, what was abandoned | `JOURNEY.md` |
 
 If it exists nowhere else, **write it somewhere append-only first**, then
-remove it. Dropping the last copy of something from a mutable file is silent:
+remove it. If the destination file does not exist yet, create it and write the
+entry: "where it must already exist" names the destination, not a
+precondition. A live session read it as a precondition, found the only copy of
+a hard-won environment fact sitting in the state file with no `CONSTRAINTS.md`
+to move it to, and correctly refused to delete it -- which left the one thing
+this table exists to rescue stranded in the one file that gets rewritten. Dropping the last copy of something from a mutable file is silent:
 nothing errors, nothing warns, and the loss is only discovered when someone
 rediscovers the fact the hard way.
 
@@ -113,3 +118,18 @@ was chosen, what was thrown away and why, and any verbatim user pushback.
 Tell the user plainly what you were unsure about or could not reconstruct. A
 gap that is named can be filled by the user in thirty seconds. A gap that is
 silently papered over becomes a wrong fact in the record.
+
+### 7. Commit, if the project's conventions allow it
+
+The ledger is only safe once it is committed: `00-PROJECT-STATE.md` is
+rewritten in place, so until then the previous version exists only in git and
+the new one only in the working tree.
+
+Follow whatever the project says about committing -- a `CLAUDE.md`, a
+contributing guide, or the user's own instruction. If nothing grants that
+permission, do not commit: say the ledger is written and uncommitted, and
+leave it to the user. Never commit anything beyond the ledger files you just
+wrote, and never push.
+
+This step was missing, and a live session wrapping up had to fall back on a
+global convention to know whether committing was wanted.

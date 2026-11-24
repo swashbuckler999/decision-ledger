@@ -11,7 +11,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude_Code-2.1+-d97757?style=for-the-badge&labelColor=1c1917)](https://claude.com/claude-code)
 [![Python](https://img.shields.io/badge/Python-3.9+-3776ab?style=for-the-badge&labelColor=1c1917&logo=python&logoColor=white)](https://www.python.org/)
 [![Dependencies](https://img.shields.io/badge/dependencies-none-16a34a?style=for-the-badge&labelColor=1c1917)](#requirements)
-[![Checks](https://img.shields.io/badge/checks-277_passing-16a34a?style=for-the-badge&labelColor=1c1917)](#tests)
+[![Checks](https://img.shields.io/badge/checks-286_passing-16a34a?style=for-the-badge&labelColor=1c1917)](#tests)
 [![Corpus](https://img.shields.io/badge/designed_against-82_real_projects-6e5494?style=for-the-badge&labelColor=1c1917)](docs/corpus-survey.md)
 [![License](https://img.shields.io/badge/license-MIT-57534e?style=for-the-badge&labelColor=1c1917)](LICENSE)
 
@@ -484,7 +484,7 @@ No third-party packages. No network access. Nothing leaves the machine.
 python tests\test_hooks.py
 ```
 
-**254 checks**, dependency-free. Each one drives a hook with the JSON payload
+**263 checks**, dependency-free. Each one drives a hook with the JSON payload
 Claude Code really sends, or a script against a throwaway repository on disk.
 Every bug this project has had keeps a named regression test — the
 untracked-directory bug it shipped with, the changelog write that silently
@@ -530,7 +530,7 @@ built and thrown away.
 
 > **v0.1.0 — early, and honest about it.**
 >
-> The scripts and hooks carry 254 unit checks and a 23-check session replay, have been run read-only against all 82
+> The scripts and hooks carry 263 unit checks and a 23-check session replay, have been run read-only against all 82
 > corpus projects, and the three adoption situations are simulated end to end
 > against sandbox copies.
 >
@@ -540,8 +540,14 @@ built and thrown away.
 > every instruction was unreachable outside the development checkout — fixed,
 > with a repository-wide check so it cannot come back.
 >
-> What has **not** happened: sustained use on a real project. One session
-> proves the wiring, not the judgement.
+> Three live sessions have now run. All five skills have been invoked and all
+> five hooks observed firing; `wrap-session` found an unrecorded decision on
+> its own, which is the plugin's central claim working unprompted.
+>
+> Each of those three sessions also found defects — in the instructions, not
+> the code, which no test here can reach. They are fixed, and the honest
+> reading is that the rate has not yet dropped to zero. Treat v0.1.0 as
+> early.
 
 ---
 

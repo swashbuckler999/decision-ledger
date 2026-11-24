@@ -26,7 +26,7 @@ Working skeleton, not yet exercised in anger.
   `ledger-adopt`, `ledger-backfill` — done
 - Five hooks: SessionStart, PreCompact, PostToolUse, Stop, UserPromptSubmit — done
 - Record scaffolding and index generation scripts — done
-- Tests — 254 unit checks (`tests/test_hooks.py`) plus a 23-check
+- Tests — 263 unit checks (`tests/test_hooks.py`) plus a 23-check
   twelve-turn session replay (`tests/simulate_session.py`), no model needed
 - The three adoption situations (fresh / undocumented / documented) —
   simulated against sandbox copies, all three now handled
@@ -49,6 +49,11 @@ Working skeleton, not yet exercised in anger.
   smaller defects, all now fixed
 - Second live session verified the path fix on all four routes, and found the
   changelog being written twice — by the script and by the skill (ADR-0032)
+- Third live session: `cold-start` and `wrap-session` both work, including
+  wrap-session finding an unrecorded decision unprompted. Five more defects,
+  all fixed — the Stop hook was reporting pre-existing untracked files as this
+  session's work (ADR-0033), and three instructions assumed ledger files that
+  do not exist yet (ADR-0034)
 - The full write path trialled on copies of three real corpus projects, with
   the originals proved untouched (ADR-0029)
 - Skill *selection* simulated in a fresh context over three rounds; all five
@@ -89,6 +94,11 @@ the user's own words.
 - Are the mining weights in ADR-0016 too parochial? They are tuned on one
   developer's 82 projects, the same concern already noted against ADR-0011.
 - Is `python` on PATH a safe assumption for installers on Windows?
+- Three live sessions have produced three sets of defects and the rate is not
+  dropping. How many clean runs are enough before submitting to the directory?
+- The concurrency test fails about once in seven full-suite runs and never in
+  isolation. Not diagnosed; the failure now reports full stderr so the next
+  occurrence can be.
 - What other environment has this never run in? The last pass found every bug
   by asking that rather than by reading code. macOS and Linux are still
   untested, `python` vs `python3` included.

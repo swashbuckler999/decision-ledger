@@ -63,3 +63,6 @@ carries the reasoning.
 - 2026-11-25 Live session trial: hooks fire, skills invoke, and every script path in every instruction was wrong - see ADR-0031
 - 2026-11-25 **ADR-0032** Let the script own the changelog entry - `docs/project-memory/decisions/ADR-0032-let-the-script-own-the-changelog-entry.md`
 - 2026-11-25 Re-test confirmed the path fix on all four routes; fixed a duplicate changelog write it found - see ADR-0032
+- 2026-11-25 **ADR-0033** Tell this session's work from the tree's existing mess - `docs/project-memory/decisions/ADR-0033-tell-this-sessions-work-from-the-trees-existing-.md`
+- 2026-11-25 **ADR-0034** A missing file is a gap to report, never a stop - `docs/project-memory/decisions/ADR-0034-a-missing-file-is-a-gap-to-report-never-a-stop.md`
+- 2026-11-25 Third live session: cold-start and wrap-session both work; five defects fixed - see ADR-0033, ADR-0034

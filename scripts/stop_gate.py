@@ -83,23 +83,28 @@ def missing_briefing_warning(cwd, payload):
 
 
 def changed_files(cwd):
-    try:
-        out = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=all"],
-            cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10,
-        )
-    except Exception:
+    """What this session changed -- not everything the tree happens to be
+    carrying.
+
+    A path is this session's work if it was not already dirty at session
+    start, or if its size or mtime has moved since. Without the baseline the
+    gate listed every pre-existing untracked file as an unrecorded decision:
+    a live session had it flag an editor settings file it had never written
+    to, on a turn where the real decision had already been recorded. The only
+    output was a false positive, and a reminder that cries wolf is one people
+    learn to dismiss -- the failure REJ-0004 exists to avoid.
+
+    With no baseline -- git unavailable, or SessionStart never ran -- every
+    dirty path is reported, as before. Over-reporting is the safe direction
+    when the hook genuinely cannot tell.
+    """
+    now = L.dirty_paths(cwd)
+    if now is None:
         return None
-    if out.returncode != 0:
-        return None
-    files = []
-    for line in out.stdout.splitlines():
-        if len(line) > 3:
-            path = line[3:].strip()
-            if " -> " in path:  # rename: keep the destination
-                path = path.split(" -> ")[-1]
-            files.append(path.strip('"'))
-    return files
+    base = L.read_session_baseline(cwd)
+    if not base:
+        return list(now)
+    return [p for p, fp in now.items() if base.get(p) != fp]
 
 
 def already_reported(cwd, key, digest):

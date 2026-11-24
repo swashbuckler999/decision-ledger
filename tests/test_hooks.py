@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -1401,8 +1402,11 @@ def test_concurrent_records_get_distinct_ids():
             t.join()
 
         failures = [e for rc, e in outcomes if rc != 0]
+        # Full stderr, not a tail: this check has failed once under full-suite
+        # load and never in isolation, so the one chance to diagnose it is the
+        # run that fails. A truncated message wasted that chance already.
         check("every run succeeded", not failures,
-              "; ".join(f.strip()[-120:] for f in failures[:2]))
+              " || ".join(" ".join(f.split()) for f in failures))
         made = sorted((d / "docs" / "project-memory" / "decisions").glob("*.md"))
         nums = [L_record_number(p.stem) for p in made]
         check("no two records share an id", len(set(nums)) == len(nums), str(nums))
@@ -1704,6 +1708,103 @@ def test_session_start_hands_over_absolute_paths():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_stop_gate_ignores_what_was_already_dirty():
+    """The gate listed every pre-existing untracked file as this session's
+    unrecorded work.
+
+    A live session had it flag an editor settings file that predated the
+    session and that the session never wrote to -- on a turn where the real
+    decision had already been recorded, so the hook's only output was a false
+    positive. On a real project every untracked file would appear at the end
+    of every session, and the warning that matters would look exactly like the
+    noise. That is the failure REJ-0004 exists to avoid, arriving by a
+    different route.
+    """
+    print("\nStop gate ignores pre-existing mess")
+    d = make_repo()
+    try:
+        (d / "README.md").write_text("# p\n", encoding="utf-8")
+        commit_all(d, "initial")
+        # Mess that predates the session: untracked, and a modified tracked file.
+        (d / ".editor-settings.json").write_text("{}\n", encoding="utf-8")
+        (d / "scratch.tmp").write_text("x\n", encoding="utf-8")
+        (d / "README.md").write_text("# p\n\nedited before the session\n",
+                                     encoding="utf-8")
+
+        out, _e, _c = run_hook("session_start.py", {"cwd": str(d),
+                                                    "hook_event_name": "SessionStart"})
+        check("SessionStart still emits its briefing", bool(context_of(out)))
+        sys.path.insert(0, str(SCRIPTS))
+        import _ledger as L
+        base = L.read_session_baseline(d)
+        check("a baseline was recorded", bool(base), str(base))
+        check("the baseline holds the pre-existing paths",
+              base and ".editor-settings.json" in base and "README.md" in base,
+              str(sorted(base or {})))
+
+        out, _e, _c = run_hook("stop_gate.py", {"cwd": str(d),
+                                                "hook_event_name": "Stop"})
+        check("the gate is silent about pre-existing mess",
+              not context_of(out).strip(), context_of(out)[:200])
+
+        # Now the session actually changes something.
+        (d / "feed.py").write_text("x = 1\n", encoding="utf-8")
+        out, _e, _c = run_hook("stop_gate.py", {"cwd": str(d),
+                                                "hook_event_name": "Stop"})
+        ctx = context_of(out)
+        check("it warns about the real change", "feed.py" in ctx,
+              ctx[:200] or "(silent)")
+        check("and does not name the pre-existing untracked file",
+              ".editor-settings.json" not in ctx, ctx[:250])
+        check("nor the file modified before the session started",
+              "README.md" not in ctx, ctx[:250])
+
+        # A pre-existing file edited DURING the session is this session's work.
+        d2 = make_repo()
+        try:
+            (d2 / "README.md").write_text("# q\n", encoding="utf-8")
+            commit_all(d2, "initial")
+            (d2 / "already.py").write_text("before\n", encoding="utf-8")
+            run_hook("session_start.py", {"cwd": str(d2),
+                                          "hook_event_name": "SessionStart"})
+            time.sleep(1.1)  # mtime has one-second resolution in the baseline
+            (d2 / "already.py").write_text("before and after\n", encoding="utf-8")
+            out, _e, _c = run_hook("stop_gate.py", {"cwd": str(d2),
+                                                    "hook_event_name": "Stop"})
+            check("a pre-existing file edited during the session IS reported",
+                  "already.py" in context_of(out),
+                  context_of(out)[:200] or "(silent)")
+        finally:
+            shutil.rmtree(d2, ignore_errors=True)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_stop_gate_without_a_baseline_reports_everything():
+    """With no baseline -- git unavailable, or SessionStart never ran -- the
+    gate must over-report rather than go quiet. A missed reminder is the
+    failure that matters; an extra one is only noise."""
+    print("\nStop gate with no baseline")
+    d = make_repo()
+    try:
+        (d / "README.md").write_text("# p\n", encoding="utf-8")
+        commit_all(d, "initial")
+        (d / "feed.py").write_text("x = 1\n", encoding="utf-8")
+        sys.path.insert(0, str(SCRIPTS))
+        import _ledger as L
+        gd = L.git_dir(d)
+        if gd is not None:
+            marker = gd / "ledger-baseline"
+            if marker.exists():
+                marker.unlink()
+        out, _e, _c = run_hook("stop_gate.py", {"cwd": str(d),
+                                                "hook_event_name": "Stop"})
+        check("still warns with no baseline", "feed.py" in context_of(out),
+              context_of(out)[:160] or "(silent)")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def main():
     print("decision-ledger hook tests")
     for t in (test_session_start, test_briefing_without_constraints_file,
@@ -1747,7 +1848,9 @@ def main():
               test_recording_a_decision_still_silences_the_nag,
               test_no_unanchored_script_paths_in_instructions,
               test_project_flag_pins_the_project,
-              test_session_start_hands_over_absolute_paths):
+              test_session_start_hands_over_absolute_paths,
+              test_stop_gate_ignores_what_was_already_dirty,
+              test_stop_gate_without_a_baseline_reports_everything):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test

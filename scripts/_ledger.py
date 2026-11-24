@@ -307,6 +307,70 @@ def git_dir(root):
     return _GIT_DIR_CACHE[key]
 
 
+def dirty_paths(cwd):
+    """Every path git reports as modified or untracked, with its fingerprint.
+
+    Returns {path: "<size>:<mtime>"} or None when git is unavailable. Used to
+    tell what a session actually changed from what was already lying around.
+    """
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=str(cwd), capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=10)
+    except Exception:
+        return None
+    if out.returncode != 0:
+        return None
+    found = {}
+    for line in out.stdout.splitlines():
+        if len(line) <= 3:
+            continue
+        path = line[3:].strip()
+        if " -> " in path:  # rename: keep the destination
+            path = path.split(" -> ")[-1]
+        path = path.strip('"')
+        try:
+            st = (Path(cwd) / path).stat()
+            found[path] = f"{st.st_size}:{int(st.st_mtime)}"
+        except OSError:
+            found[path] = "?"
+    return found
+
+
+def write_session_baseline(cwd):
+    """Record what was already dirty when the session started.
+
+    Without this the Stop hook reported every untracked file in the working
+    tree as an unrecorded change of this session -- editor settings, local
+    scratch, anything not yet gitignored. A live session had it flag a file it
+    had never written to. The warning that matters then looks exactly like the
+    noise, which is how a reminder gets ignored.
+    """
+    gd = git_dir(cwd)
+    paths = dirty_paths(cwd)
+    if gd is None or paths is None:
+        return False
+    try:
+        (gd / "ledger-baseline").write_text(
+            json.dumps(paths), encoding="utf-8")
+        return True
+    except OSError:
+        return False
+
+
+def read_session_baseline(cwd):
+    """What was already dirty at session start, or None if unknown."""
+    gd = git_dir(cwd)
+    if gd is None:
+        return None
+    try:
+        return json.loads((gd / "ledger-baseline").read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
 def today():
     return datetime.now().strftime("%Y-%m-%d")
 

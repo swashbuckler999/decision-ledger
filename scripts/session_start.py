@@ -143,6 +143,10 @@ def body():
         "session ends. If it is not written to docs/project-memory/, it is lost.",
     ]
 
+    # Snapshot what is already dirty, so the Stop hook can tell this session's
+    # work from whatever was lying in the tree before it started.
+    L.write_session_baseline(L.project_dir(payload))
+
     L.emit_context("SessionStart", "\n".join(parts))
 
 
