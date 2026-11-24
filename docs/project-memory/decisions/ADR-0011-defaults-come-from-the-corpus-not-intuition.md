@@ -68,6 +68,10 @@ third asserts the default.
 ## Diversions & Pivots
 
 ## User's own words
-> In fact I got a great idea - you have 82 test cases under "[local corpus directory - path redacted]", you can
-> simulate/test/check on all of them and design Skills accordingly. These all
-> are your test cases to learn from!!!!
+> In fact I got a great idea - you have 82 test cases under "[local corpus
+> directory — path redacted]", you can simulate/test/check on all of them and
+> design Skills accordingly. These all are your test cases to learn from!!!!
+
+The directory name is redacted because it is a path on the owner's own machine;
+the quote is otherwise verbatim. See REJ-0007 for why the corpus is described
+and never named.

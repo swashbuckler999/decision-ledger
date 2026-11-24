@@ -14,27 +14,29 @@ resolution.
 
 ---
 
-## Pushing requires the right gh account active
+## Pushing requires the owner's gh account to be the active one
 
 **Discovered:** 2026-11-24, by hitting it.
 
-Two GitHub accounts are authenticated on the development machine:
-`<the account that was active before>` (usually active) and `swashbuckler999` (owns this repo).
-
-A push while `<the account that was active before>` is active fails with:
+More than one GitHub account is authenticated where this is developed, and the
+one that owns this repository is not always the active one. A push made under
+any other account fails with a 403:
 
 ```
-remote: Permission to swashbuckler999/decision-ledger.git denied to <the account that was active before>.
+remote: Permission to swashbuckler999/decision-ledger.git denied to <other account>.
 fatal: ... The requested URL returned error: 403
 ```
 
-The working sequence:
+The working sequence is to switch, push, and switch back, so the previous
+active account is restored:
 
 ```powershell
 gh auth switch --user swashbuckler999
 git push origin main
 gh auth switch --user <the account that was active before>
 ```
+
+Approval for one push does not carry to the next; each one is asked for.
 
 **What does not work:** putting the username in the remote URL
 (`https://swashbuckler999@github.com/...`). That bypasses the gh credential

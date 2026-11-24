@@ -38,3 +38,6 @@ carries the reasoning.
 - 2026-11-25 **ADR-0019** Write the index to its configured path - `docs/project-memory/decisions/ADR-0019-write-the-index-to-its-configured-path.md`
 - 2026-11-25 **ADR-0020** Treat a config of the wrong shape as absent - `docs/project-memory/decisions/ADR-0020-treat-a-config-of-the-wrong-shape-as-absent.md`
 - 2026-11-25 Edge-case pass: 8 defects fixed, 28 checks added (200 total) - see JOURNEY.md 2026-11-25
+- 2026-11-25 **ADR-0021** Redact local machine references from the repo - `docs/project-memory/decisions/ADR-0021-redact-local-machine-references-from-the-repo.md`
+- 2026-11-25 Redacted local machine references from all tracked files - see ADR-0021
+- 2026-11-25 README rewritten as the repository landing page

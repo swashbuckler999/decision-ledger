@@ -73,7 +73,7 @@ the user's own words.
 
 Recorded permanently in **[CONSTRAINTS.md](CONSTRAINTS.md)** — read it before
 pushing or changing the runtime assumptions. In short: pushing needs
-`gh auth switch --user swashbuckler999` first; Python 3.9+ on PATH as `python`
+the repo owner's gh account to be active first; Python 3.9+ on PATH as `python`
 with no other dependencies; commit identity is repo-local; the repo is public.
 
 This section is a pointer, not the record. Constraints are append-only and do

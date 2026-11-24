@@ -237,3 +237,32 @@ these lived. Both lists now get walked.
 And the heredoc lesson landed for the fourth time: patching generated Python
 through a shell heredoc failed again, mid-edit, with an unterminated quote.
 The Write tool is not a preference in this project any more.
+
+## 2026-11-25 — a privacy correction, mid-task
+
+While a new README was being written the owner interrupted:
+
+> None of the git files should have any reference of my local laptop.
+
+The repository is public, so this is a requirement and not a preference. An
+audit of all 64 tracked files found three things: the folder name holding the
+82-project corpus, quoted verbatim in two records; a second authenticated
+GitHub account named in CONSTRAINTS.md along with which one was usually active;
+and the same account named in the briefing.
+
+REJ-0007 had already refused to publish the corpus *project names*. The folder
+containing them was missed — the rule had been written about names rather than
+about paths, and a path is the same disclosure by another route.
+
+Redacted in place and recorded in ADR-0021, which also says what was
+deliberately kept: the publishing identity the owner supplied for exactly this
+purpose, and the synthetic hostile paths in the ADR-0020 tests, which name no
+real directory.
+
+**History was not rewritten**, and that is the honest part of this entry. The
+strings sit in six of nineteen commits, including the initial one, and all of
+it is already pushed. A rewrite means every SHA changes and a force push over
+a public branch, and it still would not guarantee removal — unreachable objects
+stay fetchable by SHA until GitHub collects them, and forks and clones are
+untouched. That trade-off is the owner's to make, so it was raised rather than
+acted on.

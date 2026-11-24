@@ -53,5 +53,5 @@ scored below threshold, lower the threshold. Do not return to an uncapped list.
 ## User's own words
 n/a — this was a self-correction found by re-running the corpus, which the
 owner had earlier insisted on as the standard: "you have 82 test cases under
-'[local corpus directory - path redacted]', you can simulate/test/check on all of them and design Skills
-accordingly."
+'[local corpus directory — path redacted]', you can simulate/test/check on all
+of them and design Skills accordingly."
