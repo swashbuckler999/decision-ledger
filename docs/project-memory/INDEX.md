@@ -31,6 +31,11 @@ What was chosen, and why.
 | [ADR-0018](decisions/ADR-0018-recognise-worktrees-and-submodules-as-git.md) | Recognise worktrees and submodules as git | accepted | 2026-11-25 |
 | [ADR-0019](decisions/ADR-0019-write-the-index-to-its-configured-path.md) | Write the index to its configured path | accepted | 2026-11-25 |
 | [ADR-0020](decisions/ADR-0020-treat-a-config-of-the-wrong-shape-as-absent.md) | Treat a config of the wrong shape as absent | accepted | 2026-11-25 |
+| [ADR-0021](decisions/ADR-0021-redact-local-machine-references-from-the-repo.md) | Redact local machine references from the repo | accepted | 2026-11-25 |
+| [ADR-0022](decisions/ADR-0022-do-not-advise-a-backfill-that-would-find-nothing.md) | Do not advise a backfill that would find nothing | accepted | 2026-11-25 |
+| [ADR-0023](decisions/ADR-0023-serialise-ledger-writes-with-a-lock-file.md) | Serialise ledger writes with a lock file | accepted | 2026-11-25 |
+| [ADR-0024](decisions/ADR-0024-harden-reads-and-writes-against-hand-written-inp.md) | Harden reads and writes against hand-written input | accepted | 2026-11-25 |
+| [ADR-0025](decisions/ADR-0025-a-deterministic-install-page-written-for-agents.md) | A deterministic install page written for agents | accepted | 2026-11-25 |
 
 
 ## Rejections

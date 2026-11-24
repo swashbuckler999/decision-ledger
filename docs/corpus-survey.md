@@ -217,3 +217,36 @@ project has shipped was found by running against something real — 82 projects,
 a worktree, a repository with a deletion in it, a config pointing somewhere
 unusual — and none by writing a fixture and reading the code against it. A
 fixture tests the author's model of the world. The corpus tests the world.
+
+## A fifth pass: proving the scan writes nothing
+
+The fourth full pass added a check the earlier ones only claimed: every
+project's dirty count, HEAD, file count and newest modification time were
+captured before and after, and compared.
+
+82 projects, 0 errors, 65 seconds, **nothing written**. Two projects showed
+movement and both were accounted for: the plugin's own repository, which was
+being committed to while the pass ran, and one project with a log file an
+unrelated long-running process of the owner's appends to every minute.
+
+| | |
+|---|---|
+| Projects | 82 |
+| Git repositories | 40, one of them a linked worktree |
+| Would be adopted | 37 |
+| Changelogs adopted | 26 |
+| Journeys adopted | 6 |
+| Decisions directories adopted | 1, `adr-tools` naming |
+| Changelog order undeterminable | 5 — the scanner refused to guess, as designed |
+| Flagged for backfill | 4, of which **2 were wrong** |
+
+Those two false positives are the finding. One was a project whose history
+carries no recoverable reasoning at all, where a reconstruction would produce
+nothing. The other was the plugin's own repository — a project with a complete
+ledger, told to go and build one.
+
+That second case would have greeted **every real user on their first scan**,
+and it was invisible in every fixture, because no fixture had the plugin
+already installed. The corpus did not find it either, exactly: the corpus
+contained it, and it took a pass that printed the per-project verdict rather
+than a summary count for anyone to notice.

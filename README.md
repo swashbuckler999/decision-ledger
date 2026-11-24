@@ -1,116 +1,238 @@
 <div align="center">
 
-# Decision Ledger
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/banner-light.svg">
+  <img alt="Decision Ledger — your repository remembers the code; this makes it remember why" src="docs/assets/banner-light.svg" width="100%">
+</picture>
 
-### Your repository remembers the code. This makes it remember **why**.
+<br>
 
-A Claude Code plugin that writes a project's reasoning into the repository —
-every decision, every rejected idea, every change of scope, every mid-flight
-pivot — as numbered, append-only files, and uses hooks to make the recording
-happen instead of hoping the agent remembers.
+[![Claude Code](https://img.shields.io/badge/Claude_Code-2.1+-d97757?style=for-the-badge&labelColor=1c1917)](https://claude.com/claude-code)
+[![Python](https://img.shields.io/badge/Python-3.9+-3776ab?style=for-the-badge&labelColor=1c1917&logo=python&logoColor=white)](https://www.python.org/)
+[![Dependencies](https://img.shields.io/badge/dependencies-none-16a34a?style=for-the-badge&labelColor=1c1917)](#requirements)
+[![Checks](https://img.shields.io/badge/checks-200_passing-16a34a?style=for-the-badge&labelColor=1c1917)](#tests)
+[![Corpus](https://img.shields.io/badge/designed_against-82_real_projects-6e5494?style=for-the-badge&labelColor=1c1917)](docs/corpus-survey.md)
+[![License](https://img.shields.io/badge/license-MIT-57534e?style=for-the-badge&labelColor=1c1917)](LICENSE)
 
-[![Claude Code](https://img.shields.io/badge/Claude_Code-2.1+-d97757?style=flat-square)](https://claude.com/claude-code)
-[![Python](https://img.shields.io/badge/Python-3.9+-3776ab?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![Dependencies](https://img.shields.io/badge/dependencies-none-success?style=flat-square)](#requirements)
-[![Checks](https://img.shields.io/badge/checks-200_passing-success?style=flat-square)](#tests)
-[![Designed against](https://img.shields.io/badge/designed_against-82_real_projects-6e5494?style=flat-square)](docs/corpus-survey.md)
-[![License](https://img.shields.io/badge/license-MIT-black?style=flat-square)](LICENSE)
+<br>
+
+**Every decision, every rejected idea, every change of scope, every mid-flight pivot —**
+**written into the repository as numbered, append-only files, by hooks that fire**
+**whether or not the agent remembers to.**
+
+[**Install in 60 seconds**](#install-in-60-seconds) · [**What it is**](#what-this-is) ·
+[**Which skill do I start with?**](#which-skill-do-i-start-with) ·
+[**What is in the box**](#what-is-in-the-box) · [**Why 82 projects**](#designed-against-real-projects-not-intuition)
 
 </div>
 
 ---
 
+## What this is
+
+**Decision Ledger is a Claude Code plugin that gives a software project a
+memory of its own reasoning.**
+
+Your repository already records *what* the code does — that is what code is.
+What it does not record is the thinking: the option you weighed and rejected,
+the constraint you discovered at 2am, the scope that changed in week three and
+why, the approach you tried for a fortnight and threw away. That lives in a
+conversation, and conversations end. A Claude session is compacted, a teammate
+leaves, you yourself forget by March.
+
+This plugin writes that layer into the repo, next to the code, in a form both
+people and agents read:
+
+<table>
+<tr><td width="30%"><b>📌 &nbsp;It captures</b></td><td>Decisions, rejections, change requests, and mid-flight pivots — each with the reasoning, the <b>cost accepted</b>, and the <b>trigger that would reverse it</b></td></tr>
+<tr><td><b>⚙️ &nbsp;It enforces</b></td><td>Five hooks that notice unrecorded changes, rescue reasoning before compaction discards it, and brief every new session — so capture does not depend on anyone remembering</td></tr>
+<tr><td><b>🧊 &nbsp;It delivers</b></td><td>A genuine cold start: a new teammate, or a Claude account that has never seen this project, reads one directory and is current</td></tr>
+<tr><td><b>🤝 &nbsp;It adapts</b></td><td>Projects that already keep a <code>CHANGELOG</code>, <code>STATUS</code> or <code>docs/adr/</code> are <b>adopted</b>, never duplicated or reformatted. Projects with months of commits and no notes are <b>reconstructed</b> from history</td></tr>
+</table>
+
+**Use it if** you work with AI coding agents across long-running projects, hand
+projects between people, keep ADRs and watch them go stale, or have ever
+re-litigated a decision nobody could remember making.
+
+**You do not have to run it.** Day to day the hooks do the work: you write code,
+and when a decision appears the agent records it. The commands exist for the
+moments that need them — picking up a project you have forgotten, or wrapping up
+before you stop for the day.
+
+---
+
+## Install in 60 seconds
+
+### 🤖 Have an AI agent do it
+
+Paste this into Claude Code — or any coding agent that can run shell commands —
+and it will install and configure everything, including working out which of the
+three situations your project is in:
+
+```text
+Install the Decision Ledger plugin into this project.
+
+Repo:         https://github.com/swashbuckler999/decision-ledger
+Instructions: https://github.com/swashbuckler999/decision-ledger/blob/main/docs/AGENT-INSTALL.md
+
+Read that AGENT-INSTALL.md first and follow it exactly, in order. It is written
+for you: every step has an exact command and a check that proves it worked.
+Use project scope unless I say otherwise. Stop and tell me if a check fails.
+```
+
+That page is deterministic on purpose — preconditions, exact commands,
+verification after each step, and a troubleshooting table — so an agent can
+complete the install without guessing. Read it yourself:
+**[docs/AGENT-INSTALL.md](docs/AGENT-INSTALL.md)**.
+
+### 👤 Do it yourself
+
+**1 · Add the marketplace**
+
+```powershell
+claude plugin marketplace add swashbuckler999/decision-ledger
+```
+
+**2 · Install it — this project only**
+
+```powershell
+claude plugin install decision-ledger@sayan-skills --scope project
+```
+
+**3 · Opt the project in** — the hooks stay silent until this exists
+
+```powershell
+mkdir docs\project-memory\decisions, docs\project-memory\rejections, docs\project-memory\change-requests
+```
+
+<sub>bash / zsh: <code>mkdir -p docs/project-memory/{decisions,rejections,change-requests}</code></sub>
+
+**4 · Ask which situation your project is in**
+
+```powershell
+python scripts\scan_project.py --propose .
+```
+
+That last one writes nothing. It prints what the project already has and which
+skill to start with — nothing at all, `/ledger-backfill`, or `/ledger-adopt`.
+See [Which skill do I start with?](#which-skill-do-i-start-with)
+
+> [!TIP]
+> **Want it in every project on this machine?** Install with `--scope user`
+> instead of `--scope project`. Each project still opts in with the one `mkdir`
+> in step 3, and until then the hooks are completely silent — a plugin that
+> creates directories in repositories you did not ask about is a plugin
+> uninstalled in week one.
+>
+> The cost: an inert hook still starts a Python interpreter, roughly 106 ms per
+> prompt and 129 ms per turn end, in **every** repository you open. Full
+> trade-offs in [docs/INSTALL.md](docs/INSTALL.md).
+
+---
+
 ## The problem
 
-Six weeks after a decision, the code shows **what** you chose. Nothing shows
-what you turned down, or why. So the next person — or the next Claude session,
-with none of the conversation — proposes the idea you already tried, and loses
-a week rediscovering a paragraph.
+Six weeks after a decision, the code shows **what** you chose. Nothing shows what
+you turned down, or why. So the next person — or the next Claude session, with
+none of the conversation — proposes the idea you already tried, and loses a week
+rediscovering a paragraph.
 
 <table>
 <tr>
-<th align="left" width="50%">Without a ledger</th>
-<th align="left" width="50%">With one</th>
+<th align="left" width="50%">❌ &nbsp;Without a ledger</th>
+<th align="left" width="50%">✅ &nbsp;With one</th>
 </tr>
 <tr valign="top">
 <td>
 
 > *"Let's move the loader to threads — it'd be faster."*
 
-Reasonable. Also tried in March, reverted in April, because the broker's
-client library is not thread-safe above two connections.
+Reasonable. Also tried in March, reverted in April, because the broker's client
+library is not thread-safe above two connections.
 
-Nobody is left who remembers. The commit that reverted it says `revert
-threading`.
+Nobody is left who remembers. The commit that reverted it says
+`revert threading`.
+
+**Cost: a week, and the same two corrupted fills.**
 
 </td>
 <td>
 
 > *"Let's move the loader to threads."*
 
-The session opens with the settled rejections already in context:
+The session already opened with the settled rejections in context:
 
-**REJ-0007** — Threaded loader. *Broker client is not thread-safe above two
+**REJ-0007** · Threaded loader — *client is not thread-safe above two
 connections; corrupted two fills in April. Revisit only if the vendor ships a
 thread-safe client.*
 
-The idea is answered before it costs anything.
+**Cost: one sentence.**
 
 </td>
 </tr>
 </table>
 
-**The bar this is built against:**
-
-> Someone on a different machine, with a different account and no memory of the
-> originating conversation, reads `docs/project-memory/` and is current in
-> twenty minutes — *including* knowing which obvious-looking ideas have already
-> been tried and why they failed.
-
-Documentation that records only the final state fails that bar. The final state
-is the one thing the code already tells you.
+> [!NOTE]
+> **The bar this is built against.** Someone on a different machine, with a
+> different account and no memory of the originating conversation, reads
+> `docs/project-memory/` and is current in twenty minutes — *including* knowing
+> which obvious-looking ideas have already been tried and why they failed.
+>
+> Documentation that records only the final state fails that bar. The final
+> state is the one thing the code already tells you.
 
 ---
 
 ## The lifecycle it captures
 
-```
-                    ┌──────────────┐
-                    │  Discussion  │
-                    └──────┬───────┘
-                   ┌───────┴────────┐
-                   ▼                ▼
-            ┌─────────────┐  ┌─────────────┐
-            │  Decision   │  │  Rejection  │
-            └──────┬──────┘  └──────┬──────┘
-                   ▼                ▼
-            ┌─────────────┐  ┌─────────────┐
-            │  Reasoning  │  │  Reasoning  │   ← why each alternative lost
-            └──────┬──────┘  └──────┬──────┘
-                   ▼                ▼
-            ┌─────────────┐  ┌─────────────┐
-            │ Conclusion  │  │ Re-evaluate │   ← what would reverse this
-            └──────┬──────┘  └─────────────┘
-                   │
-                   ▼  plans change
-            ┌──────────────────────┐
-            │ Diversions & Pivots  │   ← appended inside the original record,
-            └──────────────────────┘     never overwriting it
+```mermaid
+flowchart TD
+    DISC(["💬  Discussion"])
+
+    DISC --> DEC["✅  Decision<br/>ADR-NNNN"]
+    DISC --> REJ["🚫  Rejection<br/>REJ-NNNN"]
+    DISC --> CR["🔄  Change request<br/>CR-NNNN"]
+
+    DEC --> R1["Reasoning<br/>why each alternative lost"]
+    REJ --> R2["Reasoning<br/>the disqualifying objection"]
+    CR  --> R3["Scope impact<br/>the blast radius, honestly"]
+
+    R1 --> COST["Cost<br/>what this gives up"]
+    COST --> CONC["Conclusion<br/>the rule that now binds"]
+    R2 --> TRIG["Re-evaluation trigger<br/>what would reopen it"]
+    R3 --> CONC
+
+    CONC --> DIV["📌  Diversions and Pivots<br/>appended inside the record,<br/>never overwriting it"]
+
+    classDef disc fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#78350f
+    classDef dec  fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
+    classDef rej  fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#7f1d1d
+    classDef cr   fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    classDef body fill:#f5f5f4,stroke:#a8a29e,stroke-width:1px,color:#292524
+    classDef piv  fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#4c1d95
+
+    class DISC disc
+    class DEC dec
+    class REJ rej
+    class CR cr
+    class R1,R2,R3,COST,CONC body
+    class DIV piv
 ```
 
-A diversion is **not a new file**. It is an append-only section inside the
-record it diverts from, so a change of plan sits next to the reasoning it
-changed and neither one wins.
+A **diversion is not a new file.** It is an append-only section inside the record
+it diverts from, so a change of plan sits beside the reasoning it changed and
+neither one wins.
 
 Every record carries the two sections that are almost always missing:
 
-| Section | The question it answers |
-|---|---|
-| **Cost** | What did this give up? What is now harder? |
-| **Re-evaluation trigger** | What concrete, observable thing would make this the wrong call? |
+<table>
+<tr><td width="34%"><b>Cost</b></td><td>What did this give up? What is now harder?</td></tr>
+<tr><td><b>Re-evaluation trigger</b></td><td>What concrete, observable thing would make this the wrong call?</td></tr>
+</table>
 
-A decision with no stated cost is a decision nobody argued with. A decision
-with no re-evaluation trigger can never be revisited honestly, only overturned.
+A decision with no stated cost is a decision nobody argued with. A decision with
+no re-evaluation trigger can never be revisited honestly, only overturned.
 
 ---
 
@@ -118,78 +240,68 @@ with no re-evaluation trigger can never be revisited honestly, only overturned.
 
 ```
 docs/project-memory/
-├── 00-PROJECT-STATE.md     the entry point · the only mutable file · ≤150 lines
+│
+├── 00-PROJECT-STATE.md   ← the entry point · the only mutable file · ≤150 lines
 ├── INDEX.md                generated map of every record
 ├── CHANGELOG.md            dated, append-only
 ├── JOURNEY.md              the narrative — including what was thrown away
 ├── CONSTRAINTS.md          environment and access rules, append-only
-├── decisions/              ADR-0001 …  what was chosen, and why
-├── rejections/             REJ-0001 …  what was turned down, and why
-└── change-requests/        CR-0001  …  what changed, and the blast radius
+│
+├── decisions/            ADR-0001 …   what was chosen, and why
+├── rejections/           REJ-0001 …   what was turned down, and why
+└── change-requests/      CR-0001  …   what changed, and the blast radius
 ```
 
-`00-PROJECT-STATE.md` is the only file that gets rewritten, and **nothing is
-allowed to exist solely inside it.** Everything else is append-only and never
-deleted — a superseded decision keeps its file and gains a pointer to the one
-that replaced it.
-
-That rule is checked, not trusted. `check_state.py` reports any line dropped
-from the state file that exists nowhere else in the ledger, and the Stop hook
-runs it every turn.
-
----
-
-## Install
-
-```powershell
-claude plugin marketplace add swashbuckler999/decision-ledger
-```
-
-```powershell
-claude plugin install decision-ledger@sayan-skills --scope project
-```
-
-Then opt this project in by creating the directory:
-
-```powershell
-mkdir docs\project-memory\decisions, docs\project-memory\rejections, docs\project-memory\change-requests
-```
-
-The hooks stay **completely silent** in any project without that directory — so
-a wide install never sprays files into unrelated repositories, and equally,
-installing alone does nothing until the directory exists.
-
-> **Use `--scope project`, not `--scope user`.** An inert hook still starts a
-> Python interpreter: about 235 ms per turn in projects that will never use it.
-
-Full instructions, including system-wide installation and its trade-offs:
-**[docs/INSTALL.md](docs/INSTALL.md)**.
+> [!IMPORTANT]
+> `00-PROJECT-STATE.md` is the only file that gets rewritten, and **nothing is
+> allowed to exist solely inside it.** Everything else is append-only and never
+> deleted — a superseded decision keeps its file and gains a pointer to the one
+> that replaced it.
+>
+> That rule is checked, not trusted. `check_state.py` reports any line dropped
+> from the state file that exists nowhere else in the ledger, and the Stop hook
+> runs it every turn.
 
 ---
 
 ## Which skill do I start with?
 
-That depends entirely on what the project already has, and you do not have to
-guess — a read-only scanner will tell you:
+That depends entirely on what the project already has — and you do not have to
+guess. A read-only scanner will tell you:
 
 ```powershell
 python scripts\scan_project.py --propose .
 ```
 
-| Your project | Start with | Because |
-|---|---|---|
-| New, or nearly | **nothing** — just work | `decision-ledger` records as decisions appear |
-| Months of commits, no notes | **`/ledger-backfill`** first | It is not greenfield, and the reasoning is still in the log |
-| Already keeps a `CHANGELOG`, `STATUS`, or `docs/adr/` | **`/ledger-adopt`** | Fit around what exists; never duplicate it |
+<table>
+<tr>
+<th align="left">Your project</th><th align="left">Start with</th><th align="left">Because</th>
+</tr>
+<tr>
+<td>New, or nearly</td>
+<td><b>nothing</b> — just work</td>
+<td><code>decision-ledger</code> records decisions as they appear</td>
+</tr>
+<tr>
+<td>Months of commits, no notes</td>
+<td><b><code>/ledger-backfill</code></b> first</td>
+<td>It is not greenfield, and the reasoning is still in the log</td>
+</tr>
+<tr>
+<td>Already keeps a <code>CHANGELOG</code>, <code>STATUS</code> or <code>docs/adr/</code></td>
+<td><b><code>/ledger-adopt</code></b></td>
+<td>Fit around what exists; never duplicate it</td>
+</tr>
+</table>
 
 <details>
-<summary><b>A working project that kept no notes → <code>/ledger-backfill</code></b></summary>
+<summary><b>📜 &nbsp;A working project that kept no notes → <code>/ledger-backfill</code></b></summary>
 
 <br>
 
-A project with eight months of commits and no notes is **not a new project**,
-and treating it as one leaves every decision already made sitting in the commit
-log where no future session will look for it.
+A project with eight months of commits and no notes is **not a new project**, and
+treating it as one leaves every decision already made sitting in the commit log
+where no future session will look for it.
 
 `mine_history.py` scores the history for evidence — commits that undo earlier
 work, that carry written reasoning, that name an environment limit — ranks the
@@ -205,44 +317,43 @@ reasoning is `stated`, `inferred` or `unconfirmed`, and is dated to the commit
 rather than to today. A confident fabrication is worse than an admitted gap,
 because it looks exactly like a witnessed record.
 
-The part no script can do: work you *considered and did not do* leaves no
-commit at all. The skill asks you for those directly, and three or four of them
-are worth more than everything it reconstructs on its own.
+The part no script can do: work you *considered and did not do* leaves no commit
+at all. The skill asks you for those directly, and three or four of them are
+worth more than everything it reconstructs on its own.
 
 </details>
 
 <details>
-<summary><b>A project that already keeps notes → <code>/ledger-adopt</code></b></summary>
+<summary><b>🧩 &nbsp;A project that already keeps notes → <code>/ledger-adopt</code></b></summary>
 
 <br>
 
 A read-only scanner finds the `CHANGELOG`, `STATUS`, `DECISIONS` or `docs/adr/`
 you already have, works out your changelog's **order** and **entry format** from
-the file and its git history, proposes a mapping, and writes `.ledger.json`
-only once you approve it. The ledger then appends to your files rather than
-creating a parallel set beside them.
+the file and its git history, proposes a mapping, and writes `.ledger.json` only
+once you approve it. The ledger then appends to your files rather than creating a
+parallel set beside them.
 
 It matches what is already there rather than imposing a house style:
 
-- a newest-first changelog gets new entries at the **top**, not appended under
-  the oldest heading
-- entries copy your own format — `## 2026-04-02 — Title` if that is what you
-  use
-- a `docs/adr/` numbered `0001-…` in the `adr-tools` convention is **adopted**,
-  continues at the next free number, and new files match its naming
-- CRLF files stay CRLF
+| Your project does this | So the ledger does this |
+|---|---|
+| Newest-first changelog | Inserts at the **top**, not under the oldest heading |
+| `## 2026-04-02 — Title` entries | Copies that format exactly |
+| `docs/adr/0001-…` (`adr-tools` style) | **Adopts** the folder, continues at the next free number, matches the naming |
+| CRLF line endings | Stays CRLF — byte-for-byte everywhere else |
 
 **One thing it will not adopt: your status file.** The briefing is injected into
 every session and rewritten as state changes, while a maintained `STATUS.md` is
-usually a long append-only log. Pointing one at the other would inject a
-fragment of it into every session and invite rewriting a file you never wanted
-rewritten — so the briefing is always a new file that *points at* yours.
+usually a long append-only log. Pointing one at the other would inject a fragment
+of it into every session and invite rewriting a file you never wanted rewritten —
+so the briefing is always a new file that *points at* yours.
 
 It never migrates existing content into records
 ([why](docs/project-memory/rejections/REJ-0006-migrate-existing-docs-into-records.md)),
-and nothing here overwrites a file it did not create: `build_index.py` refuses
-to touch an `INDEX.md` it did not generate, records are never overwritten, and
-the skills append in whatever style is already there rather than reformatting,
+and nothing here overwrites a file it did not create: `build_index.py` refuses to
+touch an `INDEX.md` it did not generate, records are never overwritten, and the
+skills append in whatever style is already there rather than reformatting,
 reordering or deduplicating.
 
 </details>
@@ -251,35 +362,36 @@ reordering or deduplicating.
 
 ## What is in the box
 
-### Five skills
+### 🧠 &nbsp;Five skills
 
-| Skill | What it does |
-|---|---|
-| **`decision-ledger`** | Writes a record: decision, rejection, change request or pivot |
-| **`cold-start`** | Briefs you on a project you have no memory of |
-| **`wrap-session`** | Flushes unrecorded reasoning before the context is lost |
-| **`ledger-adopt`** | Fits the ledger around a project that already keeps notes |
-| **`ledger-backfill`** | Reconstructs the ledger for a project that kept none |
+| | Skill | What it does |
+|---|---|---|
+| 📝 | **`decision-ledger`** | Writes a record: decision, rejection, change request or pivot |
+| 🧭 | **`cold-start`** | Briefs you on a project you have no memory of |
+| 🧹 | **`wrap-session`** | Flushes unrecorded reasoning before the context is lost |
+| 🧩 | **`ledger-adopt`** | Fits the ledger around a project that already keeps notes |
+| 📜 | **`ledger-backfill`** | Reconstructs the ledger for a project that kept none |
 
-### Five hooks
+### ⚓ &nbsp;Five hooks
 
-Skills carry the protocol; hooks carry the enforcement, and fire whether or not
+Skills carry the protocol. Hooks carry the enforcement, and fire whether or not
 the agent remembers to.
 
-| Hook | What it does |
-|---|---|
-| **`SessionStart`** | Injects the briefing — state, settled rejections, decisions in force, open questions |
-| **`PreCompact`** | Rescues reasoning before compaction discards it |
-| **`PostToolUse`** | Keeps a raw activity trail for later reconstruction |
-| **`Stop`** | Notices code that changed with nothing recorded |
-| **`UserPromptSubmit`** | Catches decision-shaped phrasing in your own words |
+| | Hook | What it does |
+|---|---|---|
+| 🚀 | **`SessionStart`** | Injects the briefing — state, settled rejections, decisions in force, open questions |
+| 💾 | **`PreCompact`** | Rescues reasoning before compaction discards it |
+| 👣 | **`PostToolUse`** | Keeps a raw activity trail for later reconstruction |
+| 🛑 | **`Stop`** | Notices code that changed with nothing recorded |
+| 👂 | **`UserPromptSubmit`** | Catches decision-shaped phrasing in your own words |
 
-> **`PreCompact` is the one that matters most.** Compaction keeps conclusions
-> and discards the argument that produced them — which is precisely the content
-> this plugin exists to keep. The hook writes a checkpoint to disk and tells the
-> summariser what to preserve.
+> [!TIP]
+> **`PreCompact` is the one that matters most.** Compaction keeps conclusions and
+> discards the argument that produced them — precisely the content this plugin
+> exists to keep. The hook writes a checkpoint to disk and tells the summariser
+> what to preserve.
 
-The `Stop` hook **reminds, it does not block**. A wall across every turn that
+The `Stop` hook **reminds; it does not block.** A wall across every turn that
 touches a file trains you to uninstall the plugin within a day
 ([REJ-0004](docs/project-memory/rejections/REJ-0004-blocking-stop-hook-by-default.md)).
 Set `LEDGER_STRICT=1` if you want it to block.
@@ -296,19 +408,19 @@ corrected from that data — see **[docs/corpus-survey.md](docs/corpus-survey.md
 |---|---|
 | 45% of projects already kept notes of some kind | Adoption became a first-class mode, not an afterthought |
 | 20 of 26 changelogs were newest-first | The default insert position flipped |
-| All 26 used `##` headings, none used bullets | Entry format is copied from the file, not imposed |
-| One project's `.git` is a *file*, not a directory | Worktrees and submodules are real environments |
+| All 26 used `##` headings, none used bullets | Entry format is copied from the file, never imposed |
+| One project's `.git` is a **file**, not a directory | Worktrees and submodules are real environments, and were all handled wrongly |
 
 The same corpus is used as a **test**, not just a reference, and it has earned
-that three times over. Twice it showed a filter to be badly wrong *after* it
-had passed every hand-written fixture — once for file-role matching, and once
-for history mining, where a rule that looked excellent on a fixture flagged
-**98% of all real commits**. The third time it exposed a bug hiding behind an
-empty result: a code path that returned nothing on all 82 projects, which was
-indistinguishable from working.
+that four times over. Twice it showed a filter to be badly wrong *after* it had
+passed every hand-written fixture — once for file-role matching, and once for
+history mining, where a rule that looked excellent on a fixture flagged **98% of
+all real commits.** The third time it exposed a bug hiding behind an empty
+result: a code path returning nothing on all 82 projects, indistinguishable from
+working. The fourth found the plugin telling every already-installed project to
+reconstruct a ledger it already had.
 
-The lesson is now the procedure. **A fixture tests the author's model of the
-world. The corpus tests the world.**
+> **A fixture tests the author's model of the world. The corpus tests the world.**
 
 ---
 
@@ -343,38 +455,40 @@ python tests\test_hooks.py
 
 **200 checks**, dependency-free. Each one drives a hook with the JSON payload
 Claude Code really sends, or a script against a throwaway repository on disk.
-Every bug this project has had keeps a named regression test — including the
+Every bug this project has had keeps a named regression test — the
 untracked-directory bug it shipped with, the changelog write that silently
-converted CRLF to LF, and the worktree blindness that made it call a real
-repository unversioned.
+converted CRLF to LF, the worktree blindness that made it call a real repository
+unversioned, and the index that overwrote a hand-written file.
 
 ---
 
 ## This repository uses its own plugin
 
 The records under `docs/project-memory/` are not examples. They are the real
-design history of the thing you are reading about — including the ideas that
-were built and thrown away.
+design history of the thing you are reading about — including the ideas that were
+built and thrown away.
 
 **Read in this order:**
 
-1. **[00-PROJECT-STATE.md](docs/project-memory/00-PROJECT-STATE.md)** — where
-   this project stands right now
-2. **[INDEX.md](docs/project-memory/INDEX.md)** — the map of every decision,
-   rejection and change request
-3. **[JOURNEY.md](docs/project-memory/JOURNEY.md)** — the narrative, including
-   every route abandoned and why
-4. **[INSTALL.md](docs/INSTALL.md)** — getting it into your own project
+| | File | What it gives you |
+|---|---|---|
+| 1 | **[00-PROJECT-STATE.md](docs/project-memory/00-PROJECT-STATE.md)** | Where this project stands right now |
+| 2 | **[INDEX.md](docs/project-memory/INDEX.md)** | The map of every decision, rejection and change request |
+| 3 | **[JOURNEY.md](docs/project-memory/JOURNEY.md)** | The narrative — every route abandoned, and why |
+| 4 | **[INSTALL.md](docs/INSTALL.md)** | Getting it into your own project |
 
 ### Current status
 
-**v0.1.0 — early.** The scripts and hooks are covered by 200 checks and have
-been run against all 82 corpus projects read-only, and the three adoption
-situations are simulated end to end against sandbox copies. What has *not*
-happened yet: a full live Claude Code session with the plugin installed. Hook
-command strings are verified; harness registration and the skills themselves
-are not. That is the largest remaining unknown, and it is recorded as such in
-the briefing rather than glossed over here.
+> **v0.1.0 — early, and honest about it.**
+>
+> The scripts and hooks carry 200 checks, have been run read-only against all 82
+> corpus projects, and the three adoption situations are simulated end to end
+> against sandbox copies.
+>
+> What has **not** happened yet: a full live Claude Code session with the plugin
+> installed. Hook command strings are verified; harness registration and the
+> skills themselves are not. That is the largest remaining unknown, and it is
+> recorded as such in the briefing rather than glossed over here.
 
 ---
 
@@ -382,6 +496,8 @@ the briefing rather than glossed over here.
 
 **MIT** · [LICENSE](LICENSE) · built by [Sayan Majumder](https://github.com/swashbuckler999)
 
-*If it is not written down, it is lost.*
+<br>
+
+### *If it is not written down, it is lost.*
 
 </div>

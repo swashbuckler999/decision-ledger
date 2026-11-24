@@ -77,7 +77,7 @@ def ledger_corpus(exclude, payload=None):
             seen.add(path)
             try:
                 lines.extend(
-                    path.read_text(encoding="utf-8", errors="replace").splitlines())
+                    path.read_text(encoding="utf-8-sig", errors="replace").splitlines())
             except Exception:
                 continue
     return lines
@@ -114,7 +114,7 @@ def find_orphans(cwd=None, payload=None):
     if old is None:
         return [], "no committed version to compare against"
 
-    current = state.read_text(encoding="utf-8", errors="replace").splitlines()
+    current = state.read_text(encoding="utf-8-sig", errors="replace").splitlines()
     current_set = {line.strip() for line in current}
 
     removed = [line.strip() for line in old.splitlines()

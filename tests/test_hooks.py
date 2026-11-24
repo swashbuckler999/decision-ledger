@@ -962,9 +962,14 @@ def test_scanner_flags_undocumented_history():
     print("\nUndocumented working project")
     d = make_repo(with_ledger=False)
     try:
+        # Commits that actually carry reasoning. The original fixture used
+        # "Switch module N to the new loader" six times, which scores below the
+        # evidence threshold -- so it asserted that the backfill is recommended
+        # for a history the miner can recover nothing from.
         for i in range(6):
             (d / f"mod{i}.py").write_text("x = 1\n", encoding="utf-8")
-            commit_all(d, f"Switch module {i} to the new loader")
+            commit_all(d, f"Switch module {i} to Parquet because load time "
+                          f"dropped from 40s to 2s")
         out = subprocess.run(
             [sys.executable, str(SCRIPTS / "scan_project.py"), "--propose", str(d)],
             capture_output=True, text=True, timeout=60)
@@ -972,6 +977,7 @@ def test_scanner_flags_undocumented_history():
         check("points at the backfill skill",
               "ledger-backfill" in out.stderr, out.stderr)
         check("counts the commits", "6 commits" in out.stderr, out.stderr)
+        check("counts the evidence", "carry evidence" in out.stderr, out.stderr)
     finally:
         shutil.rmtree(d, ignore_errors=True)
 
@@ -1251,6 +1257,263 @@ def test_messages_name_the_projects_own_files():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_installed_project_is_not_told_to_backfill():
+    """The ledger's own files are excluded from role detection, so a project
+    that already has the ledger looked exactly like one with no memory files.
+
+    Every scan of every real installation was therefore advising a backfill
+    that would reconstruct what was already recorded. This fired for the
+    plugin's own repository, which is how it was noticed.
+    """
+    print("\nAn already-installed project")
+    d = make_repo()
+    try:
+        folder = d / "docs" / "project-memory" / "decisions"
+        for i in range(1, 4):
+            (folder / f"ADR-{i:04d}-choice.md").write_text(
+                f"---\nid: ADR-{i:04d}\ntitle: Choice {i}\nstatus: accepted\n"
+                f"---\n\n# x\n", encoding="utf-8")
+        for i in range(6):
+            (d / "app.py").write_text(f"x{i}\n", encoding="utf-8")
+            commit_all(d, "switch to Parquet because load time dropped 40s to 2s")
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "scan_project.py"), "--propose", str(d)],
+            capture_output=True, text=True, timeout=60)
+        check("no backfill advice for an installed ledger",
+              "greenfield" not in out.stderr,
+              [ln.strip() for ln in out.stderr.splitlines() if "greenfield" in ln])
+        # ...and a .ledger.json alone is enough, with no records yet
+        d2 = make_repo(with_ledger=False)
+        try:
+            (d2 / ".ledger.json").write_text("{}", encoding="utf-8")
+            for i in range(6):
+                (d2 / "app.py").write_text(f"x{i}\n", encoding="utf-8")
+                commit_all(d2, "switch to Parquet because load dropped 40s to 2s")
+            out2 = subprocess.run(
+                [sys.executable, str(SCRIPTS / "scan_project.py"), "--propose", str(d2)],
+                capture_output=True, text=True, timeout=60)
+            check("a .ledger.json alone also counts as installed",
+                  "greenfield" not in out2.stderr, out2.stderr[-200:])
+        finally:
+            shutil.rmtree(d2, ignore_errors=True)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_history_with_no_recoverable_reasoning():
+    """Advising a reconstruction that will find nothing is noise, and noise is
+    what gets a tool uninstalled. The project is still not greenfield, so say
+    that -- but say the backfill will not help, and what to do instead.
+    """
+    print("\nHistory with nothing to recover")
+    d = make_repo(with_ledger=False)
+    try:
+        for i in range(8):
+            (d / "app.py").write_text(f"x{i}\n", encoding="utf-8")
+            commit_all(d, f"wip {i}")
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "scan_project.py"), "--propose", str(d)],
+            capture_output=True, text=True, timeout=60)
+        err = out.stderr
+        check("still says it is not greenfield", "NOT greenfield" in err, err[-200:])
+        check("says the backfill would recover almost nothing",
+              "reconstruct almost nothing" in err, err[-200:])
+        check("redirects to asking for the rejections",
+              "rejections directly" in err, err[-200:])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_index_escapes_a_pipe_in_a_title():
+    """An unescaped `|` in a title opened an extra column and shifted every
+    value in that row: the title spilled into the status cell.
+    """
+    print("\nIndex cell escaping")
+    d = make_repo()
+    try:
+        env = dict(os.environ, LEDGER_PROJECT_DIR=str(d))
+        subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"), "adr",
+                        "Use | instead of comma as the delimiter"],
+                       capture_output=True, text=True, env=env, timeout=30)
+        subprocess.run([sys.executable, str(SCRIPTS / "build_index.py")],
+                       capture_output=True, text=True, env=env, timeout=30)
+        idx = (d / "docs" / "project-memory" / "INDEX.md").read_text(encoding="utf-8")
+        row = next((ln for ln in idx.splitlines() if "ADR-0001" in ln), "")
+        # Count only the pipes that still act as cell separators.
+        separators = len(re.findall(r"(?<!\\)\|", row))
+        check("the row still has exactly four cells", separators == 5,
+              f"{separators} separators in {row.strip()[:120]}")
+        check("the pipe survives in the title, escaped", r"\|" in row, row[:120])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_record_reads_survive_a_bom():
+    """A UTF-8 BOM made the first line `\\ufeff---`, so the frontmatter block
+    was skipped entirely and the record lost its id, status and date in both
+    the index and the session briefing. Several Windows editors write one.
+    """
+    print("\nRecords written with a BOM")
+    d = make_repo()
+    try:
+        folder = d / "docs" / "project-memory" / "decisions"
+        (folder / "ADR-0002-bom.md").write_text(
+            "---\nid: ADR-0002\ntitle: Written with a BOM\nstatus: accepted\n"
+            "date: 2026-05-01\n---\n\n# x\n", encoding="utf-8-sig")
+        env = dict(os.environ, LEDGER_PROJECT_DIR=str(d))
+        subprocess.run([sys.executable, str(SCRIPTS / "build_index.py")],
+                       capture_output=True, text=True, env=env, timeout=30)
+        idx = (d / "docs" / "project-memory" / "INDEX.md").read_text(encoding="utf-8")
+        row = next((ln for ln in idx.splitlines() if "bom.md" in ln), "")
+        check("the id is read from the frontmatter", "ADR-0002]" in row, row[:140])
+        check("the title is read", "Written with a BOM" in row, row[:140])
+        check("the status is read", "accepted" in row, row[:140])
+        check("the date is read", "2026-05-01" in row, row[:140])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_concurrent_records_get_distinct_ids():
+    """Two sessions recording at the same moment both computed the same next id.
+
+    Either they wrote the same filename, where one silently replaced the other,
+    or two filenames under one number. The changelog write raced too: both
+    processes used one fixed temp name, so one os.replace failed and that
+    record landed with no changelog entry.
+    """
+    print("\nConcurrent record allocation")
+    import threading
+    d = make_repo()
+    try:
+        env = dict(os.environ, LEDGER_PROJECT_DIR=str(d))
+        outcomes = []
+
+        def go(i):
+            p = subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"),
+                                "adr", f"Concurrent choice {i}"],
+                               capture_output=True, text=True, env=env, timeout=60)
+            outcomes.append((p.returncode, p.stderr))
+
+        threads = [threading.Thread(target=go, args=(i,)) for i in range(5)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        failures = [e for rc, e in outcomes if rc != 0]
+        check("every run succeeded", not failures,
+              "; ".join(f.strip()[-120:] for f in failures[:2]))
+        made = sorted((d / "docs" / "project-memory" / "decisions").glob("*.md"))
+        nums = [L_record_number(p.stem) for p in made]
+        check("no two records share an id", len(set(nums)) == len(nums), str(nums))
+        check("one file per run", len(made) == 5, str([p.name for p in made]))
+        cl = (d / "docs" / "project-memory" / "CHANGELOG.md")
+        entries = [ln for ln in cl.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        check("no changelog entry was lost to the write race",
+              len(entries) == len(made), f"{len(made)} records, {len(entries)} entries")
+        leftovers = list((d / "docs" / "project-memory").glob("*.ledger-tmp"))
+        check("no temp file left behind", not leftovers, str(leftovers))
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def L_record_number(stem):
+    sys.path.insert(0, str(SCRIPTS))
+    import _ledger as L
+    return L.record_number(stem, "ADR")
+
+
+def test_record_directory_that_is_a_file():
+    """`mkdir(exist_ok=True)` still raises when the path exists as a file."""
+    print("\nA record directory that is really a file")
+    d = make_repo(with_ledger=False)
+    try:
+        (d / "docs" / "project-memory").mkdir(parents=True)
+        (d / "docs" / "project-memory" / "decisions").write_text("notes\n",
+                                                                  encoding="utf-8")
+        out = subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"),
+                              "adr", "Something"], capture_output=True, text=True,
+                             env=dict(os.environ, LEDGER_PROJECT_DIR=str(d)),
+                             timeout=30)
+        check("fails cleanly", out.returncode == 1, f"rc={out.returncode}")
+        check("no traceback", "Traceback" not in out.stderr, out.stderr[-160:])
+        check("says what is wrong", "decisions" in out.stderr, out.stderr[-160:])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_failed_write_leaves_no_temp_file():
+    """A read-only changelog left CHANGELOG.md.ledger-tmp beside it forever."""
+    print("\nA write that cannot complete")
+    d = make_repo()
+    cl = d / "docs" / "project-memory" / "CHANGELOG.md"
+    try:
+        cl.write_text("# Changelog\n\n## 2026-01-01\n- x\n", encoding="utf-8")
+        os.chmod(cl, 0o444)
+        subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"), "adr",
+                        "Something"], capture_output=True, text=True,
+                       env=dict(os.environ, LEDGER_PROJECT_DIR=str(d)), timeout=30)
+        leftovers = list((d / "docs" / "project-memory").glob("*ledger-tmp*"))
+        check("no temp file left behind", not leftovers, str(leftovers))
+        check("the read-only file is untouched",
+              cl.read_text(encoding="utf-8").startswith("# Changelog"))
+    finally:
+        try:
+            os.chmod(cl, 0o666)
+        except OSError:
+            pass
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_hooks_survive_hostile_payloads():
+    """Every hook, against every shape of wrong input a harness might send."""
+    print("\nHostile hook payloads")
+    payloads = [
+        {"hook_event_name": "Stop"},
+        {"cwd": r"Z:\no\such\place", "hook_event_name": "Stop"},
+        {"cwd": None, "hook_event_name": "Stop"},
+        {"cwd": 42, "hook_event_name": "Stop"},
+        [],
+    ]
+    for script in ("session_start.py", "stop_gate.py", "post_tool_use.py",
+                   "user_prompt_submit.py", "pre_compact.py"):
+        bad = []
+        for payload in payloads:
+            p = subprocess.run([sys.executable, str(SCRIPTS / script)],
+                               input=json.dumps(payload), capture_output=True,
+                               text=True, timeout=30)
+            if p.returncode != 0 or "Traceback" in p.stderr:
+                bad.append(f"{payload}(rc={p.returncode})")
+        for raw in ("", "not json at all"):
+            p = subprocess.run([sys.executable, str(SCRIPTS / script)], input=raw,
+                               capture_output=True, text=True, timeout=30)
+            if p.returncode != 0 or "Traceback" in p.stderr:
+                bad.append(f"raw {raw!r}(rc={p.returncode})")
+        check(f"{script} survives every bad payload", not bad, "; ".join(bad[:3]))
+
+
+def test_unborn_and_detached_head():
+    """A repository with no commits at all, and a detached HEAD."""
+    print("\nUnborn and detached HEAD")
+    d = make_repo()
+    try:
+        for script in ("session_start.py", "stop_gate.py", "pre_compact.py"):
+            out, err, code = run_hook(script, {"cwd": str(d),
+                                               "hook_event_name": "X"})
+            check(f"{script} survives an unborn HEAD",
+                  code == 0 and "Traceback" not in err, err[-140:])
+        commit_all(d, "one")
+        sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=d,
+                             capture_output=True, text=True).stdout.strip()
+        subprocess.run(["git", "checkout", "-q", sha], cwd=d, capture_output=True)
+        out, err, code = run_hook("stop_gate.py", {"cwd": str(d),
+                                                   "hook_event_name": "Stop"})
+        check("stop_gate survives a detached HEAD",
+              code == 0 and "Traceback" not in err, err[-140:])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def main():
     print("decision-ledger hook tests")
     for t in (test_session_start, test_briefing_without_constraints_file,
@@ -1280,7 +1543,16 @@ def main():
               test_configured_paths_cannot_leave_the_project,
               test_config_of_the_wrong_shape_is_not_fatal,
               test_session_start_caps_what_it_injects,
-              test_messages_name_the_projects_own_files):
+              test_messages_name_the_projects_own_files,
+              test_installed_project_is_not_told_to_backfill,
+              test_history_with_no_recoverable_reasoning,
+              test_index_escapes_a_pipe_in_a_title,
+              test_record_reads_survive_a_bom,
+              test_concurrent_records_get_distinct_ids,
+              test_record_directory_that_is_a_file,
+              test_failed_write_leaves_no_temp_file,
+              test_hooks_survive_hostile_payloads,
+              test_unborn_and_detached_head):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test

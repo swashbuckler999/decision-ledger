@@ -178,7 +178,7 @@ def git_order(path, root):
         return None
 
     old_lines = old.stdout.splitlines()
-    new_lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    new_lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
     if not old_lines or len(new_lines) <= len(old_lines):
         return None
 
@@ -422,19 +422,45 @@ def propose(root):
     # empty its docs directory looks. Treating it as greenfield is how the
     # reasoning behind everything already built gets left in the commit log
     # where no future session will look for it.
-    if info["is_git"] and not (set(info["files"]) - {"readme"}):
+    # ...unless the ledger is already installed here. The ledger's own files are
+    # deliberately excluded from role detection, so an installed project looks
+    # like one with no memory files at all, and every scan of every real
+    # installation was advising a backfill that would duplicate what is already
+    # recorded. Checked on the records themselves rather than the config, since
+    # a project can have the directory without a .ledger.json.
+    installed = info.get("has_ledger_config") or any(
+        d["files"] for d in info.get("memory_dirs", []) if d["path"] in own)
+
+    if info["is_git"] and not (set(info["files"]) - {"readme"}) and not installed:
         try:
             hist = mine_history.scan(root)
         except Exception:
             hist = None
         if hist and hist["total_commits"] >= 5:
-            review.append(
-                f"No memory files, but {hist['total_commits']} commits exist "
-                f"({hist['first_commit']} to {hist['last_commit']}) and "
-                f"{hist['matched']} of them carry evidence worth a record. "
-                "This project is NOT greenfield. Run the `ledger-backfill` "
-                "skill before starting new work, or everything decided so far "
-                "stays invisible to the next session.")
+            span = (f"({hist['first_commit']} to {hist['last_commit']})"
+                    if hist["first_commit"] else "")
+            if hist["matched"]:
+                review.append(
+                    f"No memory files, but {hist['total_commits']} commits exist "
+                    f"{span} and {hist['matched']} of them carry evidence worth a "
+                    "record. This project is NOT greenfield. Run the "
+                    "`ledger-backfill` skill before starting new work, or "
+                    "everything decided so far stays invisible to the next "
+                    "session.")
+            else:
+                # Advising a reconstruction that will find nothing is noise, and
+                # noise is what gets a tool uninstalled. Say what is true: the
+                # history is there and carries no written reasoning to recover.
+                review.append(
+                    f"No memory files, and {hist['total_commits']} commits exist "
+                    f"{span}, so this project is NOT greenfield -- but none of "
+                    "those commits carry recoverable reasoning: no message "
+                    "bodies, no reverts, nothing stating a reason. Running the "
+                    "`ledger-backfill` skill would reconstruct almost nothing, "
+                    "so start the ledger from now instead and ask the owner for "
+                    "the rejections directly. Work that was considered and "
+                    "dropped is the one thing no history can reconstruct, and "
+                    "here it is the only thing left to recover.")
 
     return cfg, review
 

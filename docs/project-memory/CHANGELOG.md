@@ -41,3 +41,10 @@ carries the reasoning.
 - 2026-11-25 **ADR-0021** Redact local machine references from the repo - `docs/project-memory/decisions/ADR-0021-redact-local-machine-references-from-the-repo.md`
 - 2026-11-25 Redacted local machine references from all tracked files - see ADR-0021
 - 2026-11-25 README rewritten as the repository landing page
+- 2026-11-25 **ADR-0022** Do not advise a backfill that would find nothing - `docs/project-memory/decisions/ADR-0022-do-not-advise-a-backfill-that-would-find-nothing.md`
+- 2026-11-25 **ADR-0023** Serialise ledger writes with a lock file - `docs/project-memory/decisions/ADR-0023-serialise-ledger-writes-with-a-lock-file.md`
+- 2026-11-25 **ADR-0024** Harden reads and writes against hand-written input - `docs/project-memory/decisions/ADR-0024-harden-reads-and-writes-against-hand-written-inp.md`
+- 2026-11-25 **ADR-0025** A deterministic install page written for agents - `docs/project-memory/decisions/ADR-0025-a-deterministic-install-page-written-for-agents.md`
+- 2026-11-25 Fourth corpus pass: 82 projects, 0 errors, nothing written - see JOURNEY.md
+- 2026-11-25 Edge-case round three: 7 defects fixed, 31 checks added (231 total)
+- 2026-11-25 README rebuilt with an SVG banner, Mermaid diagram and an agent install path

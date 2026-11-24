@@ -266,3 +266,89 @@ a public branch, and it still would not guarantee removal — unreachable object
 stay fetchable by SHA until GitHub collects them, and forks and clones are
 untouched. That trade-off is the owner's to make, so it was raised rather than
 acted on.
+
+## 2026-11-25 — a fourth corpus pass, and a third kind of edge case
+
+The owner asked for three things at once: a landing page worth looking at,
+another full pass over the 82 projects, and a deep hunt for edge cases still
+missed.
+
+### The pass
+
+82 projects, 0 errors, 65 seconds, and **nothing written** — proved rather than
+asserted, by capturing every project's dirty count, HEAD, file count and newest
+mtime before and after. Two projects showed movement and both were explained:
+this repository, which was being committed to during the run, and one project
+whose tunnel log is appended by a process of the owner's that is still running.
+
+Results: 40 git repositories (one of them a linked worktree, visible only since
+ADR-0018), 37 projects that would be adopted, 26 changelogs, 6 journeys, 1
+decisions directory with `adr-tools` naming, 5 changelogs where the order could
+not be determined and the scanner correctly refused to guess.
+
+And four projects flagged for backfill, **two of them wrongly**.
+
+### The third question
+
+The first round of edge cases asked *what situation is the project in*. The
+second asked *what environment is it running in*. This one asked **what state
+could the files be in** — and found four more defects, none of which the first
+two questions could have reached.
+
+The worst finding came from the pass itself: the plugin's own repository, with
+21 decisions and a full ledger, was told it was not greenfield and should run
+the backfill. ADR-0014 had excluded the ledger's own directory from role
+detection so that an installed project stops being warned about its own files;
+that left the "no memory files" field empty, which is exactly what the backfill
+check reads. So the advice fired for **every real installation**, and following
+it would duplicate everything already recorded.
+
+Then concurrency, which had never been tried. Four sessions recording at once
+produced duplicate ids, a failed write, and — the serious one — a lost changelog
+entry: both processes read the file, both spliced their own entry into what they
+read, both wrote, and each write was complete, correct and missing the other's
+line. Five records, three entries, no error. Fixed with an exclusive-create id
+claim, pid-stamped temp files, and a lock around the whole read-modify-write
+(ADR-0023).
+
+And four smaller ones in the same family: a UTF-8 BOM silently erased a
+record's frontmatter, a `|` in a title corrupted the index table, a record
+directory that is really a file crashed with a traceback, and a failed write
+left its temp file behind forever (ADR-0024).
+
+Nine probes passed unchanged, and they are in the suite now too — non-ASCII
+paths, unborn and detached HEAD, five shapes of malformed hook payload, empty
+and non-JSON stdin, a 500 KB payload, two roles pointed at one file.
+
+### The landing page
+
+The first rewrite was structurally better and the owner's verdict was blunt:
+
+> The landing page is too much dull. No design, no beauty at all.
+
+Fair. It was a restructured wall of text. Replaced with a hand-built SVG banner
+in light and dark variants, served through `<picture>` so it follows the
+reader's theme, a Mermaid lifecycle diagram that GitHub renders natively in
+colour, and GitHub's own alert callouts.
+
+The step-by-step install was first written as an HTML table with code fences
+inside `<td>`, then changed to a plain numbered list — GitHub does not render
+fenced code inside table cells reliably, and a broken install block on the
+landing page is worse than a plainer one.
+
+Then two more requirements arrived: a proper introduction explaining what the
+thing is *for*, and install steps an AI agent can follow from a pasted link
+without guessing. The second became `docs/AGENT-INSTALL.md`, keyed on the
+scanner's literal output strings rather than on descriptions of the project,
+with explicit prohibitions where a plausible choice is wrong (ADR-0025).
+
+### What is now a rule
+
+Three rounds, three questions, and every round found defects the previous ones
+could not: *what situation*, *what environment*, *what state*. The probe script
+is the method, not a one-off.
+
+And one unbroken pattern worth naming: **every data-loss bug this project has
+had was silent.** The CRLF rewrite, the index overwriting a hand-written file,
+the changelog dropping an entry while reporting success. Noisy failures get
+fixed by whoever hits them. These would not have been.

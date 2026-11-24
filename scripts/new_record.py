@@ -6,6 +6,7 @@ Prints the created path. Exits 1 on bad input so a caller can tell the
 difference between "created" and "nothing happened".
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -137,18 +138,54 @@ def main():
         return 1
 
     folder = L.path_for(L.KIND_KEY[kind])
-    folder.mkdir(parents=True, exist_ok=True)
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        # exist_ok=True still raises when the path exists as a FILE, which it
+        # does if someone keeps `decisions` as a notes file, or a config points
+        # a record kind at one. A traceback here reads as a broken tool.
+        print(f"cannot use {folder} as a {kind} directory: {exc.strerror or exc}",
+              file=sys.stderr)
+        return 1
 
-    num = L.next_id(kind)
-    rid = f"{L.PREFIX[kind]}-{num:04d}"
-    # The id inside the record stays ADR-0003 so the index and cross-references
-    # are stable; only the filename follows the folder's own convention. A
-    # project using adr-tools has 0001-foo.md, and dropping ADR-0003-foo.md in
-    # beside it is the same visible foreignness the changelog format avoids.
-    stem = (f"{num:04d}" if L.record_name_style(kind) == "bare" else rid)
-    path = folder / f"{stem}-{L.slugify(title)}.md"
-    if path.exists():
-        print(f"refusing to overwrite existing record {path}", file=sys.stderr)
+    slug = L.slugify(title)
+    bare = L.record_name_style(kind) == "bare"
+
+    # Claiming the id is a loop, not a read-then-write. Two sessions recording
+    # at the same moment both computed the same next id and both wrote: either
+    # the same filename, where one silently replaced the other, or two
+    # filenames under one number. O_EXCL makes the filesystem pick the winner,
+    # and the loser re-reads and takes the next free number.
+    rid = path = None
+    for _attempt in range(8):
+        num = L.next_id(kind)
+        # The id inside the record stays ADR-0003 so the index and
+        # cross-references are stable; only the filename follows the folder's
+        # own convention. A project using adr-tools has 0001-foo.md, and
+        # dropping ADR-0003-foo.md beside it is the same visible foreignness
+        # the changelog format avoids.
+        rid = f"{L.PREFIX[kind]}-{num:04d}"
+        candidate = folder / f"{(f'{num:04d}' if bare else rid)}-{slug}.md"
+        try:
+            fd = os.open(candidate, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            continue  # someone got here first; take the next number
+        except OSError as exc:
+            print(f"cannot create {candidate}: {exc.strerror or exc}", file=sys.stderr)
+            return 1
+        os.close(fd)
+        # A different title can still have claimed this number between the scan
+        # and the create, which would put two records under one id.
+        clash = [p for p in L.records(kind)
+                 if p != candidate and L.record_number(p.stem, L.PREFIX[kind]) == num]
+        if clash:
+            candidate.unlink()
+            continue
+        path = candidate
+        break
+    else:
+        print(f"could not allocate a free {kind} id after 8 attempts",
+              file=sys.stderr)
         return 1
 
     path.write_text(

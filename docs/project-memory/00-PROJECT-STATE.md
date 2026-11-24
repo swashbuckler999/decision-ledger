@@ -26,11 +26,18 @@ Working skeleton, not yet exercised in anger.
   `ledger-adopt`, `ledger-backfill` — done
 - Five hooks: SessionStart, PreCompact, PostToolUse, Stop, UserPromptSubmit — done
 - Record scaffolding and index generation scripts — done
-- Tests — 200 checks, dependency-free, `python tests/test_hooks.py`
+- Tests — 231 checks, dependency-free, `python tests/test_hooks.py`
 - The three adoption situations (fresh / undocumented / documented) —
   simulated against sandbox copies, all three now handled
 - The three environments (worktree / no git / unusual config) — covered after
   an edge-case pass found eight defects, two of which lost data (ADR-0018..0020)
+- File states (BOM, pipes in titles, concurrency, unwritable targets) — covered
+  after a third edge-case round found seven more, including a lost changelog
+  entry under concurrent writes (ADR-0022..0024)
+- README rebuilt as a landing page with an SVG banner and an agent-followable
+  install path, `docs/AGENT-INSTALL.md` (ADR-0025)
+- Local machine references redacted from all tracked files (ADR-0021); the
+  repository's **history** still contains them
 - Installed into the Forex ML project — **not yet**
 - Published — **yes**, https://github.com/swashbuckler999/decision-ledger (public)
 

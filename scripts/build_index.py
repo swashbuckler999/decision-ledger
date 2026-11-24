@@ -31,6 +31,17 @@ def _relative(record):
         return record.name
 
 
+def cell(text):
+    """Make a value safe to put in a markdown table cell.
+
+    An unescaped `|` in a title opened an extra column and shifted every value
+    in that row -- a record titled "Use | instead of comma" put "instead of
+    comma" where the status belongs. Titles come from record frontmatter, which
+    a human writes, so a pipe is a matter of time rather than an oddity.
+    """
+    return str(text).replace("|", "\\|").replace("\n", " ").strip()
+
+
 def section(kind, heading, note):
     rows = []
     for p in L.records(kind):
@@ -42,7 +53,8 @@ def section(kind, heading, note):
         if fm.get("superseded_by") not in (None, "", "null"):
             extra = f" -> superseded by {fm['superseded_by']}"
         rel = _relative(p)
-        rows.append(f"| [{rid}]({rel}) | {L.title_of(p)} | {status}{extra} | {date} |")
+        rows.append(f"| [{cell(rid)}]({rel}) | {cell(L.title_of(p))} | "
+                    f"{cell(status + extra)} | {cell(date)} |")
     if not rows:
         return f"\n## {heading}\n\n{note}\n\n_None recorded yet._\n"
     return (

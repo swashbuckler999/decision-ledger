@@ -32,12 +32,7 @@ def body():
     if L.is_ledger_path(target, payload):
         return  # do not log edits to the ledger itself
 
-    folder = L.path_for("activity", payload)
-    folder.mkdir(parents=True, exist_ok=True)
-    gi = folder / ".gitignore"
-    if not gi.exists():
-        gi.write_text(GITIGNORE, encoding="utf-8", newline="\n")
-
+    folder = L.activity_dir(payload)
     L.append_line(folder / f"{L.today()}.md", f"- {L.now_iso()} {tool} `{target}`")
 
 

@@ -10,10 +10,12 @@ mapped onto what already exists instead of imposing its own layout. Nothing is
 ever moved, reformatted or overwritten -- see ADR-0008 and ADR-0009.
 """
 
+import contextlib
 import json
 import os
 import re
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -332,6 +334,29 @@ def slugify(text, max_len=48):
     return slug.strip("-")[:max_len] or "untitled"
 
 
+ACTIVITY_GITIGNORE = "# Working notes, not documentation.\n*\n!.gitignore\n"
+
+
+def activity_dir(payload=None):
+    """The activity folder, created with its .gitignore already in place.
+
+    Both writers go through here. Only one of them used to create the
+    .gitignore, so whichever wrote first decided whether the trail was ignored
+    -- and the PreCompact hook, which writes first in most sessions, did not.
+    The result was a raw working-notes trail committed into the repository,
+    which is the one thing its own ignore file says it must not be.
+    """
+    folder = path_for("activity", payload)
+    folder.mkdir(parents=True, exist_ok=True)
+    gi = folder / ".gitignore"
+    if not gi.exists():
+        try:
+            gi.write_text(ACTIVITY_GITIGNORE, encoding="utf-8", newline="\n")
+        except OSError:
+            pass
+    return folder
+
+
 def append_line(path, line):
     """Append one line, creating the file if needed. Append-only by contract."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -355,11 +380,82 @@ def _write_atomic(path, text):
     `newline=""` disables translation: the bytes written are exactly the
     string given. Writing with newline="\\n" rewrote every line ending of a
     CRLF file, which git then hid behind its own normalisation.
+
+    The temp name carries the pid. With a fixed name, two sessions appending at
+    the same moment wrote the same temp file and one `os.replace` then failed
+    because the other had already renamed it -- measured as two of four
+    concurrent records landing on disk with no changelog entry and a traceback
+    for the caller. And the temp file is removed on failure, or a read-only
+    target leaves `CHANGELOG.md.ledger-tmp` lying beside it forever.
     """
-    tmp = path.with_name(path.name + ".ledger-tmp")
-    with tmp.open("w", encoding="utf-8", newline="") as fh:
-        fh.write(text)
-    os.replace(tmp, path)
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.ledger-tmp")
+    try:
+        with tmp.open("w", encoding="utf-8", newline="") as fh:
+            fh.write(text)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise
+
+
+@contextlib.contextmanager
+def _exclusive(path, timeout=10.0, stale=30.0):
+    """Hold a lock beside `path` for one read-modify-write.
+
+    Unique temp names stopped two concurrent writers from clobbering each
+    other's temp file, and did nothing about the real problem: both read the
+    changelog, both spliced their own entry into what they read, and both
+    wrote. The second write was complete and correct and silently dropped the
+    first entry -- measured as five records producing three changelog lines.
+    On Windows `os.replace` also fails outright while another process holds
+    the destination open, which is how it surfaced.
+
+    A lock file rather than a library: this plugin has no dependencies, and
+    `O_CREAT | O_EXCL` is atomic on every filesystem that matters. A lock left
+    behind by a killed process is stolen once it goes stale, so a crash cannot
+    wedge the ledger permanently.
+    """
+    lock = path.with_name(path.name + ".ledger-lock")
+    deadline = time.time() + timeout
+    fd = None
+    while fd is None:
+        try:
+            fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            try:
+                age = time.time() - lock.stat().st_mtime
+            except OSError:
+                continue  # it vanished between the failure and the stat; retry
+            if age > stale:
+                try:
+                    lock.unlink()
+                except OSError:
+                    pass
+                continue
+            if time.time() > deadline:
+                raise RuntimeError(
+                    f"timed out waiting for {lock.name}; another session may be "
+                    "writing the ledger. Delete it if nothing else is running.")
+            time.sleep(0.05)
+        except OSError:
+            # The directory may not be writable. Carry on unlocked rather than
+            # refusing to record anything at all.
+            break
+    try:
+        yield
+    finally:
+        if fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            try:
+                lock.unlink()
+            except OSError:
+                pass
 
 
 def dominant_newline(text):
@@ -384,7 +480,7 @@ def changelog_entry(payload=None, **fields):
         return DEFAULT_CHANGELOG_ENTRY.format(**fields)
 
 
-def add_changelog_entry(text, payload=None):
+def _add_changelog_entry_locked(text, payload=None):
     """Add an entry to the changelog, respecting the project's ordering.
 
     Newest-first (the default) inserts above the most recent existing entry.
@@ -446,9 +542,22 @@ def add_changelog_entry(text, payload=None):
     return path
 
 
+def add_changelog_entry(text, payload=None):
+    """Add an entry to the changelog, serialised against other sessions.
+
+    The lock covers the whole read-modify-write, because that is the unit that
+    has to be atomic: two sessions that each read, splice and write produce one
+    complete, correct file that is missing the other's entry.
+    """
+    path = path_for("changelog", payload)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with _exclusive(path):
+        return _add_changelog_entry_locked(text, payload)
+
+
 def tail(path, n):
     try:
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
     except Exception:
         return []
     return lines[-n:] if n else lines
@@ -456,7 +565,7 @@ def tail(path, n):
 
 def head(path, n):
     try:
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
     except Exception:
         return []
     return lines[:n]
@@ -464,10 +573,17 @@ def head(path, n):
 
 def frontmatter(path):
     """Minimal YAML frontmatter reader. Flat key: value pairs only -- the
-    records are written by us and deliberately keep frontmatter flat."""
+    records are written by us and deliberately keep frontmatter flat.
+
+    Read as utf-8-sig, because a UTF-8 BOM made the first line `\\ufeff---`
+    instead of `---`, so the whole block was skipped: the record lost its id,
+    status and date in the index and in the session briefing, and fell back to
+    its filename and its first heading. Several Windows editors write a BOM by
+    default, so this is a likely state for a record a human created by hand.
+    """
     data = {}
     try:
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
     except Exception:
         return data
     if not lines or lines[0].strip() != "---":
