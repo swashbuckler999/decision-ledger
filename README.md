@@ -473,8 +473,27 @@ Mostly you do not. The hooks fire on their own and the agent invokes
 ## Requirements
 
 - **Claude Code** 2.1 or later
-- **Python** 3.9+ on `PATH` as `python`
+- **Python** 3.9+ on `PATH` as **`python`** — see the warning below
 - **git** — optional; the Stop hook and orphan detection stay quiet without it
+
+> [!CAUTION]
+> **macOS and most Linux: check this before you install.** The five hooks
+> invoke `python`. On macOS, and on many Linux distributions, that command
+> does not exist — only `python3` does.
+>
+> The failure is silent. The plugin installs, validates, and lists all five
+> hooks, and then does nothing at all: no briefing, no reminders, no
+> compaction rescue, and no error pointing at the cause.
+>
+> ```bash
+> python --version    # if this fails and python3 --version works, read on
+> ```
+>
+> If only `python3` exists, open `hooks/hooks.json` in the installed plugin
+> directory and change `python` to `python3` in all five commands. Detecting
+> this automatically needs a cross-platform shell test that has not been
+> verified on macOS or Linux yet, so for now it is a manual step rather than
+> a guess.
 
 No third-party packages. No network access. Nothing leaves the machine.
 
