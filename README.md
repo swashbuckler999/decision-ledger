@@ -528,26 +528,29 @@ built and thrown away.
 
 ### Current status
 
-> **v0.1.0 — early, and honest about it.**
+> **v0.1.0 — early, and specific about why.**
 >
-> The scripts and hooks carry 268 unit checks and a 23-check session replay, have been run read-only against all 82
-> corpus projects, and the three adoption situations are simulated end to end
-> against sandbox copies.
+> **Covered:** 268 unit checks and a 23-check session replay. Read-only passes
+> over 82 real projects. The write path run against copies of three real
+> projects, with the originals proved byte-identical. Four live sessions, in
+> which all five hooks were observed firing and all five skills invoked —
+> including `wrap-session` finding an unrecorded decision on its own, which is
+> the central claim working unprompted.
 >
-> A first live session with the plugin installed has now run: the hooks fire,
-> the briefing reaches the model, all five skills are visible, and
-> `decision-ledger` ran end to end. It also found that every script path in
-> every instruction was unreachable outside the development checkout — fixed,
-> with a repository-wide check so it cannot come back.
+> **Not covered:** sustained use by anyone other than its author. Every one of
+> those four sessions found defects, and the rate has not reached zero. The
+> first found that no script the skills call was reachable outside the
+> development checkout; the fourth found two correct fixes colliding to
+> produce a false "nothing was recorded" message. Early ones were in the code,
+> later ones in the instructions, and the most recent in the join between
+> them.
 >
-> Four live sessions have now run. All five skills have been invoked and all
-> five hooks observed firing; `wrap-session` found an unrecorded decision on
-> its own, which is the plugin's central claim working unprompted.
->
-> Each of those four sessions also found defects — in the instructions, not
-> the code, which no test here can reach. They are fixed, and the honest
-> reading is that the rate has not yet dropped to zero. Treat v0.1.0 as
-> early.
+> **What that means for your data:** the defects that could have cost you
+> something — a changelog rewritten with the wrong line endings, a
+> hand-written index overwritten, an entry dropped under concurrent writes —
+> were found earlier and each has a named regression test. The ones found
+> most recently produce a wrong message rather than a wrong file. That is a
+> trend, not a guarantee.
 
 ---
 
