@@ -68,3 +68,5 @@ carries the reasoning.
 - 2026-11-25 Third live session: cold-start and wrap-session both work; five defects fixed - see ADR-0033, ADR-0034
 - 2026-11-25 **ADR-0035** A committed record is still a record - `docs/project-memory/decisions/ADR-0035-a-committed-record-is-still-a-record.md`
 - 2026-11-25 Fourth live session: the commit step and the Stop baseline collided; a committed record now counts - see ADR-0035
+- 2026-11-25 **ADR-0036** Fall back from python to python3 in the hook commands - `docs/project-memory/decisions/ADR-0036-fall-back-from-python-to-python3-in-the-hook-com.md`
+- 2026-11-25 Hooks now fall back from python to python3, so macOS and Linux work unconfigured - see ADR-0036

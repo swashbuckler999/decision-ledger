@@ -479,26 +479,20 @@ Mostly you do not. The hooks fire on their own and the agent invokes
 - **Python** 3.9+ on `PATH` as **`python`** — see the warning below
 - **git** — optional; the Stop hook and orphan detection stay quiet without it
 
-> [!CAUTION]
-> **macOS and most Linux: check this before you install.** The five hooks
-> invoke `python`. On macOS, and on many Linux distributions, that command
-> does not exist — only `python3` does.
+> [!NOTE]
+> **`python` vs `python3` is handled.** Each hook runs
+> `python … || python3 …`, so if `python` is missing — as it is on modern
+> macOS and many Linux distributions — the second name is used automatically.
+> Nothing to configure.
 >
-> The failure is silent. The plugin installs, validates, and lists all five
-> hooks, and then does nothing at all: no briefing, no reminders, no
-> compaction rescue, and no error pointing at the cause.
->
-> ```bash
-> python --version    # if this fails and python3 --version works, read on
-> ```
->
-> If only `python3` exists, open `hooks/hooks.json` in the installed plugin
-> directory and change `python` to `python3` in all five commands. Detecting
-> this automatically needs a cross-platform shell test that has not been
-> verified on macOS or Linux yet, so for now it is a manual step rather than
-> a guess.
-
-No third-party packages. No network access. Nothing leaves the machine.
+> Two things worth knowing. The order is deliberate: on Windows `python3`
+> often resolves to a Microsoft Store stub that does nothing, so `python` is
+> tried first and the stub is never reached. And the fallback relies on `||`,
+> which the shell running hook commands provides on macOS and Linux (`sh -c`)
+> and on Windows under Git Bash. **If you are on Windows without Git Bash,
+> hook commands run under PowerShell, and PowerShell 5.1 cannot parse `||`** —
+> install Git Bash, upgrade to PowerShell 7, or edit `hooks/hooks.json` in the
+> installed plugin and cut each command back to the single `python …` form.
 
 ## Tests
 

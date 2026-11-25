@@ -714,3 +714,37 @@ class of problem a 268-check suite is structurally unable to reach.
 The good news from the same run: the ADR-0033 baseline worked. The junk files
 created at the start of the session were correctly ignored as this session's
 concern until the gate's other defect dragged them into the message.
+
+## 2026-11-25 — "if you know, why not handle it?"
+
+The macOS `python` vs `python3` failure had been documented in three places
+and left as a manual step, on the grounds that detecting the interpreter
+needed a cross-platform shell test nobody had verified. The owner rejected
+that reasoning directly: if the problem is known, handle it.
+
+Reading the documentation rather than guessing settled it. Hook commands run
+under `sh -c` on macOS and Linux and Git Bash on Windows, so `||` is available
+in the normal case everywhere. There is **no OS-conditional mechanism at all**
+— no platform field, no per-OS entries, nothing that reveals the platform — so
+the per-OS idea was never possible and that is now recorded so nobody hunts
+for it again.
+
+The fallback is safe only because every hook exits 0 via `guard()`, so a
+non-zero status means the interpreter is missing and nothing else. Measured
+both branches: one run when `python` works, correct output when it does not.
+
+The order needed evidence. `python3` first looks right for POSIX and is wrong:
+on this Windows machine `python3` resolves to a Microsoft Store stub that
+produces nothing. `python` first means Windows never reaches it.
+
+One risk accepted and written down rather than buried: on Windows without Git
+Bash, hooks run under PowerShell, and PowerShell 5.1 cannot parse `||`. That
+turns a working install into a broken one for those users. The trade is a
+certain silent failure for most Mac and Linux users against a possible parse
+error for a smaller group who have a one-line fix — and the README names all
+three ways out.
+
+The same reading confirmed ADR-0031 from the documentation side: these
+variables "aren't present in the environment of commands Claude runs through
+the Bash tool." The empty `CLAUDE_PLUGIN_ROOT` the first live session found
+was specified behaviour, not a quirk.
