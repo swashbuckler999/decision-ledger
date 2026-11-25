@@ -66,11 +66,14 @@ before you stop for the day.
 
 ### 🤖 Have an AI agent do it
 
-Paste this into Claude Code — or any coding agent that can run shell commands —
-and it will install and configure everything, including working out which of the
-three situations your project is in:
+Copy one of the blocks below and paste it to Claude Code — or any coding agent
+that can run shell commands. It will install and configure everything,
+including working out which of the three situations your project is in.
 
-**For this project only:**
+> The blocks are written in **your** voice, as instructions you are giving your
+> agent. Paste one as it is; "my projects" means yours.
+
+**1 — this project only.** Copy and paste:
 
 ```text
 Install the Decision Ledger plugin into this project.
@@ -83,7 +86,7 @@ for you: every step has an exact command and a check that proves it worked.
 Install at project scope. Stop and tell me if a check fails.
 ```
 
-**For every project on this machine:**
+**2 — every project on this machine.** Copy and paste:
 
 ```text
 Install the Decision Ledger plugin account-wide, for all my projects.
