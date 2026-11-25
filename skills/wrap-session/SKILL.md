@@ -1,7 +1,7 @@
 ---
 name: wrap-session
 description: Flush the session's unrecorded reasoning into the ledger before the context is lost. Checks what changed, finds decisions and rejections that were discussed but never written down, writes the missing records and refreshes the project state file.
-when_to_use: Use when the user signals the session is over -- "that is enough for today", "I am off", "see you tomorrow", "done for now", "wrapping up", "sign off", "save the state", "hand this over now" -- or asks what is unrecorded. A handover mentioned as a future plan is not a session ending: if it changes the plan use decision-ledger, otherwise just carry on. This flushes a WHOLE session; for one decision as it happens, use decision-ledger.
+when_to_use: Use when the user signals the session is over -- "that is enough for today", "I am off", "see you tomorrow", "done for now", "wrapping up", "sign off", "save the state", "hand this over now" -- or asks what is unrecorded. A handover mentioned as a future plan is not a session ending -- if it changes the plan use decision-ledger, otherwise just carry on. This flushes a WHOLE session; for one decision as it happens, use decision-ledger.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(python *), Bash(git diff *), Bash(git status *), Bash(git log *)
 ---
 

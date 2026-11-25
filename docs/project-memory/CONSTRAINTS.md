@@ -178,3 +178,40 @@ marker could not be written, so the same reminder repeated every turn.
 Claude Code's own desktop sessions run in worktrees, so this is a common
 environment and not an edge of the map. One project in the corpus is a linked
 worktree as well, and the survey had been counting it as unversioned.
+
+## 2026-11-25: The plugin directory refuses this plugin's whole shape from an unverified organisation
+
+**Discovered:** by submitting it and reading the validation report.
+
+Anthropic's directory applies three rules to organisations that are not
+Verified, and this plugin fails all three by construction:
+
+- **"The directory accepts command hooks only from Verified organizations."**
+  All five hooks are command hooks. Changing the type does not help; the rule
+  covers every type.
+- **"`allowed-tools` entries beyond plain Read, Grep, Glob, and LS only from
+  Verified organizations."** Every skill needs `Write`, `Edit` or
+  `Bash(python *)` to write a record.
+- **"Scripts, programs, and other restricted files only from Verified
+  organizations."** Anything that is not Markdown, text, JSON, YAML or a
+  raster image is refused — which is all eleven Python scripts, both banner
+  SVGs, and `hooks/hooks.json`.
+
+Complying as an unverified organisation would mean shipping five Markdown
+files with read-only tools and no enforcement: not a reduced version of this
+plugin, a different and useless one. The hooks are the product (ADR-0003), and
+REJ-0002 already recorded why instructions alone do not work.
+
+Two further directory rules, independent of verification:
+
+- The icon must be a **square PNG or JPEG, 512-2048 px, under 2 MB**. SVG and
+  WebP are refused, and the icon is read **once**, the first time the plugin
+  is saved or submitted. Changing it later does not change the listing.
+- The name collides: **`dupflo/decision-ledger` already carries the display
+  name "Decision Ledger"** in the directory.
+
+**What is not affected:** distribution. A marketplace in a public git
+repository needs no submission, no review and no Claude account —
+`claude plugin marketplace add <owner>/<repo>` then `claude plugin install`,
+verified working at both project and user scope. The directory is discovery,
+not distribution.

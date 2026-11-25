@@ -748,3 +748,60 @@ The same reading confirmed ADR-0031 from the documentation side: these
 variables "aren't present in the environment of commands Claude runs through
 the Bash tool." The empty `CLAUDE_PLUGIN_ROOT` the first live session found
 was specified behaviour, not a quirk.
+
+## 2026-11-25 — the directory says no, and finds a bug on the way out
+
+Submitting to Anthropic's plugin directory produced two results, and the
+smaller one is the more useful.
+
+### The validator found what 270 checks could not
+
+`wrap-session`'s frontmatter held an unquoted colon — *"is not a session
+ending: if it changes the plan"* — which a strict YAML parser rejects
+outright with `mapping values are not allowed here`. Verified directly: the
+shipped line raises, the corrected line parses.
+
+It shipped because every parser in reach was lenient. `claude plugin validate
+--strict` passed it. A live session read the skill and invoked it normally.
+The frontmatter was broken and nothing said so.
+
+The damage a stricter reader would do is not a warning — the whole block
+fails, taking `when_to_use` with it, which is the single field deciding
+whether the skill is ever chosen. Three rounds of ADR-0030 went into those
+trigger phrases; a parser change would have discarded them in silence. And it
+was introduced a few hours earlier, by this session, while fixing a different
+ambiguity in the same field.
+
+Everything here tests behaviour through the harness we run on, which parses
+leniently. Nothing tested the files as *data* against a stricter reader.
+That is now ADR-0037, with a self-testing guard.
+
+### The directory itself is closed to us
+
+Three blocking findings, all the same sentence: *only from Verified
+organizations.* No command hooks. No `allowed-tools` beyond Read, Grep, Glob
+and LS. No scripts or programs — nothing that is not Markdown, text, JSON,
+YAML or a raster image.
+
+This plugin is five command hooks, eleven Python scripts, and skills that must
+write files. Complying would leave five Markdown files with read-only tools
+and no enforcement — not a smaller version of this, a different and useless
+one. ADR-0003 chose hooks precisely because instructions alone degrade, and
+REJ-0002 recorded why.
+
+Two smaller refusals stand regardless of verification: the icon must be a
+square PNG or JPEG of 512-2048 px, read **once** and never updated after; and
+the name collides with `dupflo/decision-ledger`, which already holds the
+display name "Decision Ledger".
+
+### What this does not change
+
+Distribution. The public marketplace route needs no submission, no review and
+no Claude account, and was verified working today at both project and user
+scope from the public repository. The directory is discovery; the repository
+is distribution, and it has been live all along.
+
+The validation report is worth keeping for one more reason: on the `||`
+fallback from ADR-0036 it independently reached the same conclusion about the
+Windows hazard, and recommended a Node shim as the way out. That is a real
+option if this is ever revisited.

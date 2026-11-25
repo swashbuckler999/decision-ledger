@@ -70,3 +70,5 @@ carries the reasoning.
 - 2026-11-25 Fourth live session: the commit step and the Stop baseline collided; a committed record now counts - see ADR-0035
 - 2026-11-25 **ADR-0036** Fall back from python to python3 in the hook commands - `docs/project-memory/decisions/ADR-0036-fall-back-from-python-to-python3-in-the-hook-com.md`
 - 2026-11-25 Hooks now fall back from python to python3, so macOS and Linux work unconfigured - see ADR-0036
+- 2026-11-25 **ADR-0037** Validate skill frontmatter as strict YAML - `docs/project-memory/decisions/ADR-0037-validate-skill-frontmatter-as-strict-yaml.md`
+- 2026-11-25 Directory submission blocked for unverified organisations; fixed a strict-YAML defect it found - see ADR-0037

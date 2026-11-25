@@ -1870,6 +1870,57 @@ def test_code_committed_without_a_record_still_warns():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_skill_frontmatter_is_valid_yaml():
+    """Every SKILL.md frontmatter must survive a strict YAML parser.
+
+    `wrap-session` shipped with an unquoted `: ` inside its `when_to_use`
+    value -- "...is not a session ending: if it changes the plan...". A strict
+    parser raises `mapping values are not allowed here` on that, which would
+    drop the whole frontmatter and with it the trigger that makes the skill
+    fire at all.
+
+    It went out because the lenient parsers accepted it: `claude plugin
+    validate --strict` passed, and a live session invoked the skill normally.
+    The directory's own validator caught it. A plain-text check is used here
+    rather than a YAML library, because this project ships no dependencies.
+    """
+    print("\nSkill frontmatter is strict-YAML safe")
+    problems, checked = [], 0
+    for p in sorted((ROOT / "skills").glob("*/SKILL.md")):
+        text = p.read_text(encoding="utf-8")
+        parts = text.split("---")
+        if len(parts) < 3 or parts[0].strip():
+            problems.append(f"{p.parent.name}: no leading frontmatter block")
+            continue
+        keys = set()
+        for line in parts[1].strip().splitlines():
+            if line.startswith((" ", "\t")) or ":" not in line:
+                continue
+            key, value = line.split(":", 1)
+            keys.add(key.strip())
+            v = value.strip()
+            if v.startswith(('"', "'")):
+                continue  # quoted: anything goes inside
+            if ": " in v:
+                problems.append(f"{p.parent.name}/{key.strip()}: unquoted ': ' "
+                                "- a strict parser reads this as a nested mapping")
+            if "#" in v:
+                problems.append(f"{p.parent.name}/{key.strip()}: unquoted '#' "
+                                "- a strict parser reads the rest as a comment")
+        for required in ("name", "description", "when_to_use"):
+            if required not in keys:
+                problems.append(f"{p.parent.name}: missing '{required}'")
+        checked += 1
+    check(f"all {checked} skills parse safely", not problems,
+          "; ".join(problems[:4]))
+
+    # And prove the guard actually catches the shape that shipped.
+    bad = 'when_to_use: a handover is not a session ending: if it changes the plan\n'
+    line = bad.split(":", 1)
+    caught = ": " in line[1].strip() and not line[1].strip().startswith('"')
+    check("the guard catches the exact line that shipped", caught)
+
+
 def main():
     print("decision-ledger hook tests")
     for t in (test_session_start, test_briefing_without_constraints_file,
@@ -1917,7 +1968,8 @@ def main():
               test_stop_gate_ignores_what_was_already_dirty,
               test_stop_gate_without_a_baseline_reports_everything,
               test_a_committed_record_still_counts_as_recorded,
-              test_code_committed_without_a_record_still_warns):
+              test_code_committed_without_a_record_still_warns,
+              test_skill_frontmatter_is_valid_yaml):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test
