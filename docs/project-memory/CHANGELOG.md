@@ -72,3 +72,9 @@ carries the reasoning.
 - 2026-11-25 Hooks now fall back from python to python3, so macOS and Linux work unconfigured - see ADR-0036
 - 2026-11-25 **ADR-0037** Validate skill frontmatter as strict YAML - `docs/project-memory/decisions/ADR-0037-validate-skill-frontmatter-as-strict-yaml.md`
 - 2026-11-25 Directory submission blocked for unverified organisations; fixed a strict-YAML defect it found - see ADR-0037
+- 2026-11-26 **ADR-0038** Report a record history kept in one file - `docs/project-memory/decisions/ADR-0038-report-a-record-history-kept-in-one-file.md`
+- 2026-11-26 **ADR-0039** Read a decisions document as a source - `docs/project-memory/decisions/ADR-0039-read-a-decisions-document-as-a-source.md`
+- 2026-11-26 **ADR-0040** Tell users a newer version exists, without phoning home - `docs/project-memory/decisions/ADR-0040-tell-users-a-newer-version-exists-without-phonin.md`
+- 2026-11-26 A decisions document is now read into records instead of pointed at - see ADR-0039
+- 2026-11-26 Version marker, upgrade check and a weekly notice, with no network call - see ADR-0040
+- 2026-11-26 Fixed: non-ASCII was mangled when any script printed it on Windows

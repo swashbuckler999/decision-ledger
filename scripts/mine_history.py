@@ -22,6 +22,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _ledger as L  # noqa: E402
+
 # Commits whose subject carries one of these are about a route changed or
 # closed, which is the material rejections are made of. Found by reading the
 # subjects in the corpus rather than guessed: "switch", "drop" and "revert"
@@ -278,6 +281,7 @@ def summary(info):
 
 
 def main():
+    L.use_utf8_stdout()
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     root = args[0] if args else "."
     limit = DEFAULT_LIMIT

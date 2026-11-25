@@ -26,7 +26,7 @@ Working skeleton, not yet exercised in anger.
   `ledger-adopt`, `ledger-backfill` — done
 - Five hooks: SessionStart, PreCompact, PostToolUse, Stop, UserPromptSubmit — done
 - Record scaffolding and index generation scripts — done
-- Tests — 268 unit checks (`tests/test_hooks.py`) plus a 23-check
+- Tests — 313 unit checks (`tests/test_hooks.py`) plus a 23-check
   twelve-turn session replay (`tests/simulate_session.py`), no model needed
 - The three adoption situations (fresh / undocumented / documented) —
   simulated against sandbox copies, all three now handled
@@ -63,6 +63,9 @@ Working skeleton, not yet exercised in anger.
 - Skill *selection* simulated in a fresh context over three rounds; all five
   `when_to_use` fields rewritten after it found three overlaps, and one
   regression the rewrite itself introduced (ADR-0030)
+- A decisions document is now read into records, not pointed at (ADR-0039)
+- Version marker, `check_version.py` and a weekly upgrade notice, with no
+  network call (ADR-0040); release notes in `docs/RELEASES.md`
 - Published — **yes**, https://github.com/swashbuckler999/decision-ledger (public)
 
 ## How it works, in one paragraph

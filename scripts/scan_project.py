@@ -413,6 +413,39 @@ def propose(root):
             f"{status['path']} ({status['bytes']:,} bytes) is NOT adopted. The "
             "briefing is a new file that points at it -- see ADR-0009.")
 
+    # A record role found as a single FILE rather than a directory. Detected
+    # but never adoptable: records are one file each, and REJ-0003 rejected
+    # the single-file shape. Saying nothing is the ADR-0014 defect -- a real
+    # install met a project whose whole decision history was an 800-line
+    # DECISIONS.md, and the scanner discussed changelog formatting while
+    # ignoring it. The file then sits unreferenced while new records start at
+    # 0001 beside it, which is the loss this tool exists to prevent.
+    for role, label in (("decisions", "decision"), ("rejections", "rejection"),
+                        ("change_requests", "change-request")):
+        found = info["files"].get(role)
+        if not found:
+            continue
+        review.append(
+            f"{found['path']} ({found['bytes']:,} bytes, "
+            f"{found.get('lines', 0):,} lines) holds {label} history in ONE "
+            "file. Not adopted: this ledger writes one record per file, and "
+            "the single-file shape was rejected in REJ-0003 because it has to "
+            "be edited to supersede anything, which breaks the append-only "
+            f"guarantee. New {label}s will go to "
+            f"{LEDGER_DEFAULTS[role]}/ starting at 0001.\n"
+            f"      It is NOT ignored: run the `ledger-backfill` skill, "
+            "which reads a decisions document as a source in its own "
+            "right -- the author already drew the boundaries, dated the "
+            "entries and wrote the reasoning, so nothing has to be "
+            "invented. Entries marked superseded become real supersedes "
+            "/ superseded_by links, which a flat file cannot express. "
+            f"Start with: read_decisions_doc.py {found['path']} "
+            "--summary. The original is never modified, moved or "
+            "deleted, and stays the historical source: link it from the "
+            "briefing (ADR-0009). If it is still being written to, "
+            "settle which store is authoritative first -- two live "
+            "places for one kind of record is worse than one old one.")
+
     if not info["is_git"]:
         review.append(
             "Not a git repository: the Stop hook and orphan detection stay "
@@ -466,6 +499,7 @@ def propose(root):
 
 
 def main():
+    L.use_utf8_stdout()
     flags = {"--survey", "--propose"}
     args = [a for a in sys.argv[1:] if a not in flags]
     target = Path(args[0]) if args else Path.cwd()

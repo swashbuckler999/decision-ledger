@@ -48,6 +48,9 @@ What was chosen, and why.
 | [ADR-0035](decisions/ADR-0035-a-committed-record-is-still-a-record.md) | A committed record is still a record | accepted | 2026-11-25 |
 | [ADR-0036](decisions/ADR-0036-fall-back-from-python-to-python3-in-the-hook-com.md) | Fall back from python to python3 in the hook commands | accepted | 2026-11-25 |
 | [ADR-0037](decisions/ADR-0037-validate-skill-frontmatter-as-strict-yaml.md) | Validate skill frontmatter as strict YAML | accepted | 2026-11-25 |
+| [ADR-0038](decisions/ADR-0038-report-a-record-history-kept-in-one-file.md) | Report a record history kept in one file | accepted | 2026-11-26 |
+| [ADR-0039](decisions/ADR-0039-read-a-decisions-document-as-a-source.md) | Read a decisions document as a source | accepted | 2026-11-26 |
+| [ADR-0040](decisions/ADR-0040-tell-users-a-newer-version-exists-without-phonin.md) | Tell users a newer version exists, without phoning home | accepted | 2026-11-26 |
 
 
 ## Rejections

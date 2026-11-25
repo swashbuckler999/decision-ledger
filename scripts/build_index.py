@@ -64,6 +64,7 @@ def section(kind, heading, note):
 
 
 def main():
+    L.use_utf8_stdout()
     L.take_project_flag(sys.argv)
     if not L.ledger_exists():
         print("no ledger found in this project", file=sys.stderr)

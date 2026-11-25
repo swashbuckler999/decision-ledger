@@ -805,3 +805,66 @@ The validation report is worth keeping for one more reason: on the `||`
 fallback from ADR-0036 it independently reached the same conclusion about the
 Windows hazard, and recommended a Node shim as the way out. That is a real
 option if this is ever revisited.
+
+## 2026-11-26 — a rejection used the way rejections are supposed to be used
+
+A real installation hit a project keeping every decision in one 800-line
+`DECISIONS.md`. The installing agent read REJ-0003, recognised the shape, and
+quoted the rejection back with the observation that the project had already
+hit the failure it predicted. The plugin working exactly as designed.
+
+Then the scanner was found silent about that file entirely (ADR-0038), and the
+first fix — mention it, tell the user to link it from the briefing — was
+rejected by the owner as a half-answer:
+
+> It would be better to read them, structure them as per the skills mechanism,
+> break into multiple files with reasoning as per the skills structure,
+> understand it, and prepare it properly - INSTEAD OF THROWING IT AWAY!!!!
+
+They were right, and two of this project's own records proved it faster than
+argument could.
+
+**REJ-0006 was being applied beyond its scope.** It refused to migrate a 369 KB
+*changelog* — prose where the boundaries would have to be invented. A
+decisions document is the opposite: the author drew the boundaries, wrote the
+dates, wrote the reasoning, marked what was superseded. Every judgement the
+rejection feared inventing had already been made.
+
+**And the plugin contradicted itself.** `mine_history.py` reconstructs records
+from commit messages — thinner, more incidental, less deliberate — and handles
+the honesty problem with provenance markers. Refusing to read a file literally
+named DECISIONS.md while mining one-line commits was an oversight wearing a
+principle's clothes.
+
+**The rejection's own trigger had already fired.** REJ-0006 said revisit "as
+an explicitly invoked, one-document-at-a-time operation that backs up the
+original outside the repository first, shows a diff, and requires
+confirmation". It never said never. It said not silently, not during adoption,
+not wholesale — which is precisely what was then built (ADR-0039).
+
+That is the first time this project has used a re-evaluation trigger for its
+intended purpose. A rejection with a real trigger is not a closed door; it is
+a door with the key taped to it.
+
+### Versioning, and a promise worth keeping
+
+The owner also asked for an upgrade path, because a change like this is
+worthless to anyone running an older copy who never learns it exists.
+
+Claude Code already has `claude plugin update`. What was missing was
+awareness. The design question was the weekly check: a version check normally
+means asking a server, and the README promises nothing leaves the machine.
+
+It reads the plugin cache instead — sibling version directories already on
+disk, refreshed by the user's own `marketplace update`. No network call at
+all, asserted by a test that greps the source for `urllib`, `requests`,
+`socket` and `curl` (ADR-0040). A plugin whose first new feature quietly
+starts contacting a server is one nobody should trust.
+
+### And a bug that had shipped
+
+Writing the parser surfaced that **every script mangled non-ASCII when it
+printed**. `Café` reached the skill as `Caf?`, in the very worklist used to
+quote an author's own words verbatim. The data was always read correctly; only
+the printing was lossy, which is why it survived — the pipeline looked right
+on both sides of the break.

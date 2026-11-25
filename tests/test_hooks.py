@@ -1921,6 +1921,260 @@ def test_skill_frontmatter_is_valid_yaml():
     check("the guard catches the exact line that shipped", caught)
 
 
+def test_single_file_decision_history_is_reported():
+    """A project keeping all its decisions in one DECISIONS.md must be told
+    what will happen to it.
+
+    The role is detected but is not adoptable: records are one file each, and
+    REJ-0003 rejected the single-file shape. The scanner used to detect it and
+    then say nothing -- a real installation met a project whose entire
+    decision history was an 800-line DECISIONS.md, and the review notes
+    discussed changelog formatting while ignoring it entirely.
+
+    Silence is the defect, exactly as ADR-0014 found for unprefixed record
+    directories. The file would sit unreferenced while new records started at
+    0001 beside it, which is the loss this tool exists to prevent.
+    """
+    print("\nSingle-file decision history is reported")
+    d = make_repo(with_ledger=False)
+    try:
+        lines = ["# Decisions", ""]
+        for i in range(1, 120):
+            lines += [f"## 2026-03-{i % 28 + 1:02d} - Decision {i}", "Reasoning.", ""]
+        (d / "DECISIONS.md").write_text("\n".join(lines), encoding="utf-8")
+        (d / "CHANGELOG.md").write_text("# Changelog\n\n## 2026-01-01\n- start\n",
+                                        encoding="utf-8")
+        commit_all(d, "init")
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "scan_project.py"), "--propose", str(d)],
+            capture_output=True, text=True, timeout=60)
+        err, cfg = out.stderr, json.loads(out.stdout)
+
+        check("the file is named in the review", "DECISIONS.md" in err, err[-300:])
+        check("it says the file is not adopted", "Not adopted" in err, err[-300:])
+        check("it cites the rejection that explains why", "REJ-0003" in err)
+        check("it says where new records will go",
+              "docs/project-memory/decisions" in err)
+        # Deliberately changed in ADR-0039: the note no longer says "do not
+        # migrate, just link". It routes to ledger-backfill, which reads the
+        # document as a source. What must never change is that the original
+        # file is not touched.
+        check("it routes to the backfill skill", "ledger-backfill" in err, err[-300:])
+        check("it names the reader script", "read_decisions_doc.py" in err)
+        check("it promises the original is not modified",
+              "never modified, moved or deleted" in err, err[-300:])
+        check("it says to link it from the briefing", "briefing" in err)
+        check("and decisions is NOT in the adopted list",
+              "decisions" not in (cfg.get("adopted") or []),
+              str(cfg.get("adopted")))
+        check("the config still points decisions at our own directory",
+              (cfg.get("paths") or {}).get("decisions")
+              == "docs/project-memory/decisions",
+              str((cfg.get("paths") or {}).get("decisions")))
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_decisions_directory_is_still_adopted():
+    """The mirror: a DIRECTORY of records is adoptable and must stay so.
+
+    The fix above must not make the scanner refuse the adr-tools layout that
+    ADR-0014 added support for.
+    """
+    print("\nA decisions directory is still adopted")
+    d = make_repo(with_ledger=False)
+    try:
+        (d / "docs" / "adr").mkdir(parents=True)
+        for i in (1, 2, 3):
+            (d / "docs" / "adr" / f"000{i}-choice.md").write_text(
+                f"# Choice {i}\n", encoding="utf-8")
+        commit_all(d, "init")
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "scan_project.py"), "--propose", str(d)],
+            capture_output=True, text=True, timeout=60)
+        cfg = json.loads(out.stdout)
+        check("the directory is adopted",
+              "decisions" in (cfg.get("adopted") or []), str(cfg.get("adopted")))
+        check("and the config points at theirs",
+              (cfg.get("paths") or {}).get("decisions") == "docs/adr",
+              str((cfg.get("paths") or {}).get("decisions")))
+        check("no single-file warning fires for a directory",
+              "holds decision history in ONE file" not in out.stderr)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+DECISION_DOC = """# Decisions
+
+## Table of contents
+
+Links to everything below.
+
+## 2026-01-04 — Use Postgres, not SQLite
+
+We need concurrent writers for the ingest workers. SQLite's single-writer
+lock showed up as timeouts under four workers. Cost: an extra service.
+
+## 2026-02-11 — Single-file decision log [superseded]
+
+Keeping everything in this file. Superseded 2026-08-02: it grew past the
+point where anyone reads it on a cold start.
+
+## 2026-03-19 — Rejected: move ingest to Lambda
+
+Cold starts pushed p99 past the 400 ms budget and the vendor SDK needs a
+persistent connection pool.
+
+## 2026-08-02 — Split decisions into one file each
+
+Because the single file stopped being readable.
+
+## Formatting conventions
+
+Use ISO dates.
+"""
+
+
+def test_decisions_document_is_read_not_ignored():
+    """A decisions document is better source material than git history.
+
+    REJ-0006 refused to migrate documents, but it was written about a 369 KB
+    changelog -- prose where the boundaries would have to be invented. In a
+    decisions document the author drew the boundaries, wrote the dates, wrote
+    the reasoning and marked what was superseded. Its own re-evaluation
+    trigger allowed exactly this: explicitly invoked, one document, backed up,
+    confirmed.
+    """
+    print("\nReading a decisions document")
+    d = Path(tempfile.mkdtemp(prefix="ledger-doc-"))
+    try:
+        doc = d / "DECISIONS.md"
+        doc.write_text(DECISION_DOC, encoding="utf-8")
+        before = doc.read_bytes()
+
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "read_decisions_doc.py"), str(doc)],
+            capture_output=True, text=True, encoding="utf-8", timeout=30)
+        check("exits 0", out.returncode == 0, out.stderr[-200:])
+        data = json.loads(out.stdout)
+        entries = data["entries"]
+        titles = [e["title"] for e in entries]
+
+        check("one candidate per decision heading", len(entries) == 4,
+              f"{len(entries)}: {titles}")
+        check("the table of contents is not a decision",
+              not any("contents" in t.lower() for t in titles), str(titles))
+        check("a trailing section heading is not a decision either",
+              not any("conventions" in t.lower() for t in titles), str(titles))
+        check("dates are lifted out of the headings",
+              all(e["date"] for e in entries),
+              str([(e["title"], e["date"]) for e in entries]))
+        check("and removed from the titles",
+              not any(t.startswith("2026-") for t in titles), str(titles))
+        check("the rejection is classified as one",
+              [e["kind"] for e in entries if "Lambda" in e["title"]] == ["rej"],
+              str([(e["title"], e["kind"]) for e in entries]))
+        check("the author's superseded mark is carried",
+              [e["superseded"] for e in entries if "Single-file" in e["title"]]
+              == [True], str([(e["title"], e["superseded"]) for e in entries]))
+        check("the status mark is stripped from the title",
+              not any("[" in t for t in titles), str(titles))
+        check("the author's own prose is carried across verbatim",
+              any("single-writer" in e["body"] for e in entries))
+
+        check("THE ORIGINAL IS BYTE-IDENTICAL", doc.read_bytes() == before)
+
+        s = subprocess.run(
+            [sys.executable, str(SCRIPTS / "read_decisions_doc.py"), str(doc),
+             "--summary"], capture_output=True, text=True, encoding="utf-8",
+            timeout=30)
+        check("the summary says nothing was written",
+              "Nothing has been written" in s.stdout, s.stdout[:200])
+        check("and explains the supersession upgrade",
+              "superseded_by" in s.stdout)
+        check("the original is still byte-identical after --summary",
+              doc.read_bytes() == before)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_non_ascii_survives_the_scripts():
+    """Printing used to re-encode to the console code page on Windows, so a
+    commit or a heading containing an accent or an em dash reached the skill
+    as replacement characters -- in the worklist used to quote an author's own
+    words verbatim. The data was always read correctly; only the printing was
+    lossy."""
+    print("\nNon-ASCII survives to stdout")
+    d = Path(tempfile.mkdtemp(prefix="ledger-utf8-"))
+    try:
+        doc = d / "DECISIONS.md"
+        doc.write_text("# Decisions\n\n## 2026-04-02 — Café ingest, naïve parser\n\n"
+                       "Chose the naïve parser — it is 3× faster.\n",
+                       encoding="utf-8")
+        out = subprocess.run(
+            [sys.executable, str(SCRIPTS / "read_decisions_doc.py"), str(doc),
+             "--summary"], capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=30)
+        for ch, label in (("Café", "an accented word"), ("naïve", "a diaeresis")):
+            check(f"{label} survives in the summary", ch in out.stdout,
+                  repr(out.stdout[:160]))
+        check("no replacement characters in the summary",
+              "�" not in out.stdout, repr(out.stdout[:160]))
+
+        # The em dash after the date is consumed as a separator, correctly, so
+        # look for one in the body instead -- which is the text that gets
+        # quoted into a record.
+        raw = subprocess.run(
+            [sys.executable, str(SCRIPTS / "read_decisions_doc.py"), str(doc)],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=30)
+        body = json.loads(raw.stdout)["entries"][0]["body"]
+        check("an em dash survives in the body", "—" in body, repr(body[:120]))
+        check("a multiplication sign survives too", "×" in body, repr(body[:120]))
+        check("the date separator was stripped from the title, not mangled",
+              json.loads(raw.stdout)["entries"][0]["title"]
+              == "Café ingest, naïve parser",
+              repr(json.loads(raw.stdout)["entries"][0]["title"]))
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_version_check_reports_and_never_phones_home():
+    """The upgrade check reads directories only. The plugin promises nothing
+    leaves the machine, and a weekly version ping would make that conditional."""
+    print("\nVersion check")
+    sys.path.insert(0, str(SCRIPTS))
+    import check_version
+
+    src = (ROOT / "scripts" / "check_version.py").read_text(encoding="utf-8")
+    for banned in ("urllib", "requests", "http.client", "socket", "curl"):
+        check(f"makes no use of {banned}", banned not in src)
+
+    check("reports this plugin's own version",
+          check_version.installed_version(ROOT) == "0.1.0",
+          str(check_version.installed_version(ROOT)))
+
+    d = Path(tempfile.mkdtemp(prefix="ledger-ver-"))
+    try:
+        for v in ("0.1.0", "0.2.0", "0.10.0"):
+            (d / v / ".claude-plugin").mkdir(parents=True)
+            (d / v / ".claude-plugin" / "plugin.json").write_text(
+                json.dumps({"name": "decision-ledger", "version": v}),
+                encoding="utf-8")
+        current, newer, cached = check_version.status(d / "0.1.0")
+        check("sees a newer version beside it", newer == "0.10.0",
+              f"current={current} newer={newer}")
+        check("0.10.0 sorts above 0.2.0, not below",
+              check_version.parse("0.10.0") > check_version.parse("0.2.0"))
+        _c, newest_from_top, _x = check_version.status(d / "0.10.0")
+        check("the newest version is told nothing is newer",
+              newest_from_top is None, str(newest_from_top))
+        check("a source checkout reports no cache layout",
+              check_version.status(ROOT)[2] is False)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def main():
     print("decision-ledger hook tests")
     for t in (test_session_start, test_briefing_without_constraints_file,
@@ -1969,7 +2223,12 @@ def main():
               test_stop_gate_without_a_baseline_reports_everything,
               test_a_committed_record_still_counts_as_recorded,
               test_code_committed_without_a_record_still_warns,
-              test_skill_frontmatter_is_valid_yaml):
+              test_skill_frontmatter_is_valid_yaml,
+              test_single_file_decision_history_is_reported,
+              test_a_decisions_directory_is_still_adopted,
+              test_decisions_document_is_read_not_ignored,
+              test_non_ascii_survives_the_scripts,
+              test_version_check_reports_and_never_phones_home):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test

@@ -49,6 +49,25 @@ CONSTRAINTS_FILE = "CONSTRAINTS.md"
 SUBDIRS = {"adr": "decisions", "rej": "rejections", "cr": "change-requests"}
 
 
+def use_utf8_stdout():
+    """Print UTF-8 regardless of the console's code page.
+
+    On Windows, stdout defaults to the ANSI code page, so printing a commit
+    subject containing "Café" or an em dash produced replacement
+    characters -- in the very worklist the backfill skill reads to quote an
+    author's own words. The data was always read correctly; only the printing
+    was lossy, which is the kind of bug that survives because the pipeline
+    looks fine either side of it.
+
+    Hooks are unaffected: they emit JSON, and json.dumps escapes non-ASCII.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass  # not a real stream, or an older Python: printing still works
+
+
 def read_hook_input():
     """Parse the hook JSON delivered on stdin. Returns {} if anything is off."""
     try:

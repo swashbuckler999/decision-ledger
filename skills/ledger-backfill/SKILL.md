@@ -59,7 +59,57 @@ thing Parquet buys over CSV. **Unconfirmed — ask whoever chose this.**
 
 That record is useful. A confident fabrication is worse than nothing.
 
-## 1. Mine the history
+## 0. If the project keeps a decisions document, start there
+
+Before mining git, look for a file that already holds decisions: `DECISIONS.md`,
+`ARCHITECTURE.md`, `docs/decisions.md`, or a long `## Decisions` section. The
+adoption scanner names it if there is one.
+
+**It is better source material than git history, and it comes first.** A
+commit message is reasoning written in passing. A decisions document is
+reasoning written on purpose: the author already decided what counted as a
+decision, where each one began and ended, what the reasoning was, and which
+ones stopped applying. None of that has to be inferred.
+
+```
+python "<plugin root>/scripts/read_decisions_doc.py" <path to the document> --summary
+```
+
+Read-only. It splits the document on its own headings and reports one
+candidate per heading, with dates, which read as rejections, and which the
+author marked superseded.
+
+**The rules for this are stricter than for mining, because the file exists and
+can be damaged:**
+
+- **Never modify, move, rename or delete the original.** It stays exactly
+  where it is, byte for byte, after the backfill as before. This is not
+  negotiable and it is the condition under which this step exists at all
+  (REJ-0006).
+- **Back it up outside the repository first** and tell the user where. One
+  document at a time.
+- **Show the candidate list and get confirmation** before writing any record.
+- **Carry the author's prose across; do not improve it.** Their words in
+  `Discussion`, their reasoning in `Reasoning`. If a heading has no reasoning
+  under it, the record says so — do not supply one.
+- Every record from this source carries `provenance: from-document`,
+  `sources: [<file>#<heading>]` and `confidence: stated`, with the entry's own
+  date, never today's.
+
+**The part that is a genuine upgrade, not a reformat:** entries the author
+marked `[superseded]`, `[obsolete]` or similar become real `supersedes` and
+`superseded_by` links between records. A flat file cannot express that — it is
+why marking supersession there means editing the file, which is the tension
+REJ-0003 identified. Resolve those links and the history becomes navigable
+instead of chronological.
+
+Afterwards, the document is still the historical source. Link it from the
+briefing and say plainly that records before a given date were reconstructed
+from it. **If the project is still writing to that file, stop and ask which is
+authoritative from now on.** Two live stores for one kind of record is worse
+than one stale one.
+
+## 1. Then mine the history
 
 ```
 python "<plugin root>/scripts/mine_history.py" <project path> --summary

@@ -125,6 +125,7 @@ BODIES = {"adr": ADR, "rej": REJ, "cr": CR}
 
 
 def main():
+    L.use_utf8_stdout()
     # Pin the project before anything resolves a path from cwd.
     argv = L.take_project_flag(sys.argv)
     if len(argv) < 3:

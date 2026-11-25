@@ -11,7 +11,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude_Code-2.1+-d97757?style=for-the-badge&labelColor=1c1917)](https://claude.com/claude-code)
 [![Python](https://img.shields.io/badge/Python-3.9+-3776ab?style=for-the-badge&labelColor=1c1917&logo=python&logoColor=white)](https://www.python.org/)
 [![Dependencies](https://img.shields.io/badge/dependencies-none-16a34a?style=for-the-badge&labelColor=1c1917)](#requirements)
-[![Checks](https://img.shields.io/badge/checks-291_passing-16a34a?style=for-the-badge&labelColor=1c1917)](#tests)
+[![Checks](https://img.shields.io/badge/checks-336_passing-16a34a?style=for-the-badge&labelColor=1c1917)](#tests)
 [![Corpus](https://img.shields.io/badge/designed_against-82_real_projects-6e5494?style=for-the-badge&labelColor=1c1917)](docs/corpus-survey.md)
 [![License](https://img.shields.io/badge/license-MIT-57534e?style=for-the-badge&labelColor=1c1917)](LICENSE)
 
@@ -322,6 +322,11 @@ python "<plugin>\scripts\scan_project.py" --propose .
 <td>It is not greenfield, and the reasoning is still in the log</td>
 </tr>
 <tr>
+<td>Keeps one big <code>DECISIONS.md</code></td>
+<td><b><code>/ledger-backfill</code></b></td>
+<td>It is read into records — the author already wrote the reasoning, dates and supersessions</td>
+</tr>
+<tr>
 <td>Already keeps a <code>CHANGELOG</code>, <code>STATUS</code> or <code>docs/adr/</code></td>
 <td><b><code>/ledger-adopt</code></b></td>
 <td>Fit around what exists; never duplicate it</td>
@@ -469,9 +474,29 @@ Mostly you do not. The hooks fire on their own and the agent invokes
 | `/wrap-session` | Before you stop for the day |
 | `python "<plugin>\scripts\mine_history.py" . --summary` | To see what your history still holds that the ledger does not |
 | `python "<plugin>\scripts\check_state.py" --project .` | Lists anything dropped from the state file that exists nowhere else |
+| `python "<plugin>\scripts\check_version.py"` | Which version you have, and whether a newer one is on disk |
 | `python "<plugin>\scripts\build_index.py" --project .` | After adding records by hand |
 
 ---
+
+## Staying up to date
+
+The session briefing tells you — once a week at most — if a newer version is
+already on your machine but not in use. It never upgrades anything itself, and
+**it makes no network request**: it reads only Claude Code's own plugin cache,
+which you refresh when you choose to.
+
+```powershell
+claude plugin marketplace update sayan-skills
+```
+
+```powershell
+claude plugin update decision-ledger@sayan-skills
+```
+
+Your ledger lives in your project, not in the plugin, so an upgrade never
+touches your records. What changed in each version, and why:
+**[docs/RELEASES.md](docs/RELEASES.md)**.
 
 ## Requirements
 
@@ -500,7 +525,7 @@ Mostly you do not. The hooks fire on their own and the agent invokes
 python tests\test_hooks.py
 ```
 
-**268 checks**, dependency-free. Each one drives a hook with the JSON payload
+**313 checks**, dependency-free. Each one drives a hook with the JSON payload
 Claude Code really sends, or a script against a throwaway repository on disk.
 Every bug this project has had keeps a named regression test — the
 untracked-directory bug it shipped with, the changelog write that silently
@@ -546,7 +571,7 @@ built and thrown away.
 
 > **v0.1.0 — early, and specific about why.**
 >
-> **Covered:** 268 unit checks and a 23-check session replay. Read-only passes
+> **Covered:** 313 unit checks and a 23-check session replay. Read-only passes
 > over 82 real projects. The write path run against copies of three real
 > projects, with the originals proved byte-identical. Four live sessions, in
 > which all five hooks were observed firing and all five skills invoked —

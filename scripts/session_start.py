@@ -5,6 +5,7 @@ instead of blind. Plain stdout would also work, but additionalContext inside
 hookSpecificOutput is the documented field and keeps the output structured.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -19,6 +20,57 @@ MAX_REJECTIONS = 40
 # actually orients a cold start.
 MAX_DECISIONS = 60
 MAX_CHANGE_REQUESTS = 25
+
+
+UPGRADE_INTERVAL_DAYS = 7
+
+
+def upgrade_note():
+    """One line about a newer version, at most once a week. Never fatal.
+
+    Rate-limited by a stamp in the plugin's own data directory, which Claude
+    Code keeps across updates, so the reminder survives an upgrade without
+    following the user from project to project.
+
+    The check only reads directories. Nothing here contacts the network: the
+    plugin promises that nothing leaves the machine, and a version check is
+    not worth making that promise conditional.
+    """
+    try:
+        import time
+        import check_version
+
+        current, newer, _cached = check_version.status()
+        if not newer:
+            return None
+
+        home = os.environ.get("CLAUDE_PLUGIN_DATA")
+        stamp = Path(home) / "last-upgrade-notice" if home else None
+        if stamp is not None:
+            try:
+                if stamp.is_file():
+                    last = float(stamp.read_text(encoding="utf-8").strip() or 0)
+                    seen = stamp.parent / "last-upgrade-version"
+                    same = (seen.read_text(encoding="utf-8").strip()
+                            if seen.is_file() else "")
+                    fresh = time.time() - last < UPGRADE_INTERVAL_DAYS * 86400
+                    if fresh and same == newer:
+                        return None  # already said so this week
+                stamp.parent.mkdir(parents=True, exist_ok=True)
+                stamp.write_text(str(time.time()), encoding="utf-8")
+                (stamp.parent / "last-upgrade-version").write_text(
+                    newer, encoding="utf-8")
+            except OSError:
+                pass  # cannot remember: say it anyway rather than go silent
+
+        return (
+            f"You are running **{current}**; **{newer}** is already on this "
+            "machine but not in use. Tell the user, once, in a single line -- "
+            "do not act on it.\n\n"
+            "```\nclaude plugin update decision-ledger@sayan-skills\n```\n\n"
+            f"What changed: {check_version.RELEASES_URL}")
+    except Exception:
+        return None
 
 
 def body():
@@ -142,6 +194,13 @@ def body():
         "user pushes back, record it with the `decision-ledger` skill before the "
         "session ends. If it is not written to docs/project-memory/, it is lost.",
     ]
+
+    # Once a week at most, and only from what is already on disk: say if a
+    # newer version has been fetched but not switched to. No network call --
+    # see check_version.py for why that matters.
+    note = upgrade_note()
+    if note:
+        parts += ["## Plugin update available", "", note, ""]
 
     # Snapshot what is already dirty, so the Stop hook can tell this session's
     # work from whatever was lying in the tree before it started.

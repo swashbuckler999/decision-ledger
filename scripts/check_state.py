@@ -129,6 +129,7 @@ def find_orphans(cwd=None, payload=None):
 
 
 def main():
+    L.use_utf8_stdout()
     L.take_project_flag(sys.argv)
     quiet = "--quiet" in sys.argv
     orphans, reason = find_orphans()
