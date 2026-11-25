@@ -47,12 +47,48 @@ said:
 | "install it here", "add it to this project", or nothing about scope | **project** | `claude plugin install decision-ledger@sayan-skills --scope project` |
 | "for all my projects", "every project", "machine-wide", "account-wide", "globally", "so I can use it anywhere" | **user** | `claude plugin install decision-ledger@sayan-skills --scope user` |
 
-**Check:** `claude plugin list` includes `decision-ledger`.
+**Check:** `claude plugin list` includes `decision-ledger` **and its `Status:`
+is `enabled`**. If it says `disabled`, do 2a before going on.
 
 If the user said nothing about scope, use **project** and tell them in one line
 that `--scope user` would make it available everywhere. Do not ask them to
 choose before doing anything — install here, say the other option exists, and
 move on.
+
+### 2a. If it is already installed but disabled
+
+This happens when an earlier session installed it and nobody enabled it, and
+it is the one place the scope you just chose can be thrown away silently.
+
+```
+claude plugin enable decision-ledger@sayan-skills --scope project
+```
+
+**`enable` has its own `--scope`, and it defaults to auto-detect rather than
+to the scope the plugin was installed at.** Run it bare and it can write
+`"decision-ledger@sayan-skills": true` into the **user** settings file while
+`claude plugin list` still reports `Scope: project`. The listing looks
+correct, and the hooks now run in every repository the user opens — exactly
+the outcome the warning below says never to choose on your own initiative,
+reached without ever typing `--scope user`.
+
+**So always pass `--scope` to `enable`, matching the install.** Then check
+where the flag landed, because the listing will not tell you:
+
+```
+grep -n decision-ledger ~/.claude/settings.json      # absent, or false
+grep -n decision-ledger .claude/settings.json        # true
+```
+
+If it went to the wrong file, move it rather than leaving both set:
+
+```
+claude plugin disable decision-ledger@sayan-skills --scope user
+claude plugin enable  decision-ledger@sayan-skills --scope project
+```
+
+That leaves `false` in the user settings and `true` in the project's: on
+here, silent everywhere else.
 
 **Never pick `--scope user` on your own initiative.** It starts a Python
 interpreter on every prompt and every turn end in *every* repository they open,
@@ -152,6 +188,19 @@ If the answer comes from `00-PROJECT-STATE.md` with no file reads first, the
 `SessionStart` hook fired. If the session starts opening files to find out, it
 did not — check that the plugin is enabled for this project.
 
+**It must be a NEW session, and you cannot do this check yourself in the
+session that installed it.** Hooks and skills enabled mid-session are not
+picked up by the running session: `SessionStart` has already been and gone,
+and the five skills are not in the skill list, so invoking
+`decision-ledger:ledger-adopt` fails with `Unknown skill` even though the
+install is correct. Nothing is wrong when that happens.
+
+So the last thing you do in the installing session is **tell the user to
+restart or `/clear`**, and say that the end-to-end check above is theirs to
+run on the other side of it. Until then, follow the skill files directly —
+`skills/<name>/SKILL.md` in the plugin directory — rather than reporting the
+install as broken.
+
 ---
 
 ## 7. Commit it
@@ -182,6 +231,9 @@ git commit -m "Add decision-ledger project memory"
 | Symptom | Cause | Fix |
 |---|---|---|
 | Hooks never fire | The opt-in directory is missing | Step 4 |
+| Hooks never fire, and the directory exists | The plugin was enabled during this session | Restart or `/clear`. Mid-session enables do not register — step 6 |
+| `Unknown skill: decision-ledger:...` | Same cause | Not a broken install. Follow `skills/<name>/SKILL.md` directly this session; the skills appear after a restart |
+| Enabled for one project, but hooks run everywhere | `claude plugin enable` was run without `--scope`, so the flag went to user settings | Step 2a |
 | `python: command not found` in hook output | Only `python3` exists | Edit `hooks/hooks.json`, replace `python` with `python3` |
 | Stop hook repeats the same reminder every turn | `git rev-parse` is failing in this directory | Confirm it is a git repository; the reminder is intentionally repeated when the de-duplication marker cannot be written |
 | `build_index.py` refuses to run | An `INDEX.md` exists that the script did not generate | Rename it, or point `paths.index` elsewhere in `.ledger.json` |

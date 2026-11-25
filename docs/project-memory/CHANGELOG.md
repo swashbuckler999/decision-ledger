@@ -78,3 +78,5 @@ carries the reasoning.
 - 2026-11-26 A decisions document is now read into records instead of pointed at - see ADR-0039
 - 2026-11-26 Version marker, upgrade check and a weekly notice, with no network call - see ADR-0040
 - 2026-11-26 Fixed: non-ASCII was mangled when any script printed it on Windows
+- 2026-11-26 **ADR-0041** Enable takes its own scope, and the install page must say so - `docs/project-memory/decisions/ADR-0041-enable-takes-its-own-scope-and-the-install-page-.md`
+- 2026-11-26 **ADR-0042** The installing session cannot verify its own install - `docs/project-memory/decisions/ADR-0042-the-installing-session-cannot-verify-its-own-ins.md`
