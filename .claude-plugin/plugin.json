@@ -8,5 +8,15 @@
     "email": "sayan.official@gmail.com"
   },
   "license": "MIT",
-  "keywords": ["memory", "decisions", "adr", "documentation", "cold-start", "handoff"]
+  "keywords": [
+    "memory",
+    "decisions",
+    "adr",
+    "documentation",
+    "cold-start",
+    "handoff"
+  ],
+  "icon": "./assets/icon.svg",
+  "documentationUrl": "https://github.com/swashbuckler999/decision-ledger#readme",
+  "supportUrl": "https://github.com/swashbuckler999/decision-ledger/issues"
 }
