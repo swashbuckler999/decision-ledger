@@ -16,7 +16,7 @@
     "cold-start",
     "handoff"
   ],
-  "icon": "./assets/icon.svg",
+  "icon": "./assets/icon.png",
   "documentationUrl": "https://github.com/swashbuckler999/decision-ledger#readme",
   "supportUrl": "https://github.com/swashbuckler999/decision-ledger/issues"
 }
