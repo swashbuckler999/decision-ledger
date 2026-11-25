@@ -104,7 +104,27 @@ def changed_files(cwd):
     base = L.read_session_baseline(cwd)
     if not base:
         return list(now)
-    return [p for p, fp in now.items() if base.get(p) != fp]
+    was = base.get("paths") or {}
+    return [p for p, fp in now.items() if was.get(p) != fp]
+
+
+def recorded_this_session(cwd, files, payload):
+    """Did this session write a record anywhere -- including into a commit?
+
+    Dirty ledger files are the obvious evidence and they are not the only
+    evidence. `wrap-session` now tells the agent to commit, and committing
+    empties the dirty set: a live session wrote a record, committed it, and
+    was then told "nothing was written to the decision ledger" on the same
+    turn. The gate was reading the absence of its own evidence as proof of
+    the opposite.
+
+    So commits made since the session's baseline count too.
+    """
+    if any(L.is_recording_path(f, payload) for f in files):
+        return True
+    base = L.read_session_baseline(cwd) or {}
+    return any(L.is_recording_path(p, payload)
+               for p in L.committed_since(cwd, base.get("head")))
 
 
 def already_reported(cwd, key, digest):
@@ -160,7 +180,7 @@ def unrecorded_warning(cwd, files, payload):
     # recording, so it belongs in neither: counting it as code would nag about
     # the plugin's own bookkeeping, and counting it as a recording silences the
     # nag on the first edit of every new project. It is simply ignored.
-    ledger_touched = [f for f in files if L.is_recording_path(f, payload)]
+    ledger_touched = recorded_this_session(cwd, files, payload)
     code_touched = [f for f in files if not L.is_ledger_path(f, payload)]
     if not code_touched or ledger_touched:
         return None

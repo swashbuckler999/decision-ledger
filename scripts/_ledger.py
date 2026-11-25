@@ -354,21 +354,54 @@ def write_session_baseline(cwd):
         return False
     try:
         (gd / "ledger-baseline").write_text(
-            json.dumps(paths), encoding="utf-8")
+            json.dumps({"paths": paths, "head": head_sha(cwd)}),
+            encoding="utf-8")
         return True
     except OSError:
         return False
 
 
+def head_sha(cwd):
+    """The current commit, or None where there is none yet."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(cwd),
+                             capture_output=True, text=True, encoding="utf-8",
+                             errors="replace", timeout=10)
+    except Exception:
+        return None
+    return out.stdout.strip() if out.returncode == 0 else None
+
+
+def committed_since(cwd, base_head):
+    """Paths touched by commits made since `base_head`, or [] if unknown."""
+    import subprocess
+    if not base_head:
+        return []
+    try:
+        out = subprocess.run(["git", "diff", "--name-only", f"{base_head}..HEAD"],
+                             cwd=str(cwd), capture_output=True, text=True,
+                             encoding="utf-8", errors="replace", timeout=15)
+    except Exception:
+        return []
+    if out.returncode != 0:
+        return []
+    return [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
+
+
 def read_session_baseline(cwd):
-    """What was already dirty at session start, or None if unknown."""
+    """The session-start snapshot: {"paths": {...}, "head": sha}, or None."""
     gd = git_dir(cwd)
     if gd is None:
         return None
     try:
-        return json.loads((gd / "ledger-baseline").read_text(encoding="utf-8"))
+        data = json.loads((gd / "ledger-baseline").read_text(encoding="utf-8"))
     except Exception:
         return None
+    if isinstance(data, dict) and "paths" in data:
+        return data
+    # An older baseline held the path map alone.
+    return {"paths": data if isinstance(data, dict) else {}, "head": None}
 
 
 def today():

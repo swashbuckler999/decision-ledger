@@ -679,3 +679,38 @@ code is well covered — 263 checks and a session replay. The 660 lines of
 instructions wrapped around it are still being read for the first time by
 someone other than the person who wrote them, and every reading has found
 something.
+
+## 2026-11-25 — the fourth session: two correct fixes, one new bug
+
+The fourth live run was meant to confirm the previous round. It confirmed it
+and found a defect that round had created.
+
+ADR-0034 gave `wrap-session` a commit step. ADR-0033 gave the Stop gate a
+session baseline. Together: the session recorded a decision, committed the
+ledger as instructed, and the gate announced **"nothing was written to the
+decision ledger"** on the very turn a record had been written and committed —
+listing the working tree's junk files as the unrecorded work.
+
+Committing empties the dirty set, and the dirty set was the only place the
+gate looked for proof anything had been recorded. It was reading the absence
+of its own evidence as proof of the opposite, and the better the session
+behaved the more confidently it was wrong.
+
+Fixed by storing the session's starting HEAD in the baseline and counting
+commits since it. With a mirror test, because committing must not become a
+way to silence the gate.
+
+### What the run says about the remaining risk
+
+The three earlier sessions found defects in individual pieces. This one found
+a defect produced by **two correct fixes meeting.** Neither change was wrong;
+the join was. That failure mode does not shrink as the pieces improve, and no
+test of either piece alone could have surfaced it.
+
+So the live session is not a box to tick before publishing. It is the only
+instrument that sees the plugin whole — and the one that keeps finding the
+class of problem a 268-check suite is structurally unable to reach.
+
+The good news from the same run: the ADR-0033 baseline worked. The junk files
+created at the start of the session were correctly ignored as this session's
+concern until the gate's other defect dragged them into the message.

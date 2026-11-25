@@ -66,3 +66,5 @@ carries the reasoning.
 - 2026-11-25 **ADR-0033** Tell this session's work from the tree's existing mess - `docs/project-memory/decisions/ADR-0033-tell-this-sessions-work-from-the-trees-existing-.md`
 - 2026-11-25 **ADR-0034** A missing file is a gap to report, never a stop - `docs/project-memory/decisions/ADR-0034-a-missing-file-is-a-gap-to-report-never-a-stop.md`
 - 2026-11-25 Third live session: cold-start and wrap-session both work; five defects fixed - see ADR-0033, ADR-0034
+- 2026-11-25 **ADR-0035** A committed record is still a record - `docs/project-memory/decisions/ADR-0035-a-committed-record-is-still-a-record.md`
+- 2026-11-25 Fourth live session: the commit step and the Stop baseline collided; a committed record now counts - see ADR-0035

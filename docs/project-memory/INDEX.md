@@ -45,6 +45,7 @@ What was chosen, and why.
 | [ADR-0032](decisions/ADR-0032-let-the-script-own-the-changelog-entry.md) | Let the script own the changelog entry | accepted | 2026-11-25 |
 | [ADR-0033](decisions/ADR-0033-tell-this-sessions-work-from-the-trees-existing-.md) | Tell this session's work from the tree's existing mess | accepted | 2026-11-25 |
 | [ADR-0034](decisions/ADR-0034-a-missing-file-is-a-gap-to-report-never-a-stop.md) | A missing file is a gap to report, never a stop | accepted | 2026-11-25 |
+| [ADR-0035](decisions/ADR-0035-a-committed-record-is-still-a-record.md) | A committed record is still a record | accepted | 2026-11-25 |
 
 
 ## Rejections

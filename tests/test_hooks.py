@@ -1738,9 +1738,12 @@ def test_stop_gate_ignores_what_was_already_dirty():
         import _ledger as L
         base = L.read_session_baseline(d)
         check("a baseline was recorded", bool(base), str(base))
+        paths = (base or {}).get("paths") or {}
         check("the baseline holds the pre-existing paths",
-              base and ".editor-settings.json" in base and "README.md" in base,
-              str(sorted(base or {})))
+              ".editor-settings.json" in paths and "README.md" in paths,
+              str(sorted(paths)))
+        check("and the commit the session started from",
+              bool((base or {}).get("head")), str(base)[:120])
 
         out, _e, _c = run_hook("stop_gate.py", {"cwd": str(d),
                                                 "hook_event_name": "Stop"})
@@ -1805,6 +1808,68 @@ def test_stop_gate_without_a_baseline_reports_everything():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_a_committed_record_still_counts_as_recorded():
+    """Committing the ledger used to erase the gate's evidence of it.
+
+    wrap-session tells the agent to commit; committing empties the dirty set,
+    which was the only place the gate looked for proof anything was recorded.
+    A live session wrote a record, committed it, and was told on the same turn
+    that nothing was written to the ledger -- with the working tree's junk
+    listed as the unrecorded work. The gate read the absence of its own
+    evidence as proof of the opposite, and only because the skill had just
+    been fixed to commit.
+    """
+    print("\nA committed record still counts")
+    d = make_repo()
+    try:
+        (d / "README.md").write_text("# p\n", encoding="utf-8")
+        commit_all(d, "initial")
+        run_hook("session_start.py", {"cwd": str(d),
+                                      "hook_event_name": "SessionStart"})
+        (d / "feed.py").write_text("x = 1\n", encoding="utf-8")
+        (d / "junk.log").write_text("noise\n", encoding="utf-8")
+        subprocess.run([sys.executable, str(SCRIPTS / "new_record.py"),
+                        "--project", str(d), "adr", "Compress with zstd"],
+                       capture_output=True, text=True, timeout=30)
+        out, _e, _c = run_hook("stop_gate.py", {"cwd": str(d),
+                                                "hook_event_name": "Stop"})
+        check("quiet while the record is still uncommitted",
+              not context_of(out).strip(), context_of(out)[:160])
+
+        commit_all(d, "Record the decision and the work")
+        out, _e, _c = run_hook("stop_gate.py", {"cwd": str(d),
+                                                "hook_event_name": "Stop"})
+        ctx = context_of(out)
+        check("still quiet once it is committed",
+              "nothing was written to the decision ledger" not in ctx,
+              ctx[:220] or "(silent)")
+        check("and does not blame the junk file", "junk.log" not in ctx,
+              ctx[:220])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_code_committed_without_a_record_still_warns():
+    """The mirror: committing must not become a way to silence the gate."""
+    print("\nCommitting code alone does not silence it")
+    d = make_repo()
+    try:
+        (d / "README.md").write_text("# p\n", encoding="utf-8")
+        commit_all(d, "initial")
+        run_hook("session_start.py", {"cwd": str(d),
+                                      "hook_event_name": "SessionStart"})
+        (d / "feed.py").write_text("x = 1\n", encoding="utf-8")
+        commit_all(d, "Change the loader, record nothing")
+        (d / "feed.py").write_text("x = 2\n", encoding="utf-8")
+        out, _e, _c = run_hook("stop_gate.py", {"cwd": str(d),
+                                                "hook_event_name": "Stop"})
+        check("warns about code changed with no record",
+              "decision ledger" in context_of(out),
+              context_of(out)[:200] or "(silent)")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def main():
     print("decision-ledger hook tests")
     for t in (test_session_start, test_briefing_without_constraints_file,
@@ -1850,7 +1915,9 @@ def main():
               test_project_flag_pins_the_project,
               test_session_start_hands_over_absolute_paths,
               test_stop_gate_ignores_what_was_already_dirty,
-              test_stop_gate_without_a_baseline_reports_everything):
+              test_stop_gate_without_a_baseline_reports_everything,
+              test_a_committed_record_still_counts_as_recorded,
+              test_code_committed_without_a_record_still_warns):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test
