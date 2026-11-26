@@ -979,3 +979,103 @@ And again the finding came from an instrument, not from reading code: this
 time from somebody arriving with no memory of the project and asking why a
 file looked odd. The test suite has still never found a defect of consequence
 here. That is now six distinct instruments, and the newest one is the cheapest.
+
+## 2026-11-26 — the user asks why an installed plugin does nothing
+
+Installed and enabled at project scope in its own repository, following
+`AGENT-INSTALL.md` to the letter. Then, while deciding something else
+entirely — whether to commit `.claude/settings.json` — the user said:
+
+> "I guess, what is the use of a plugin if you install it and don't use t.
+> Everyone will think it is working after installation, but effectively it
+> needs another command to start. It is better to auto-start after install,
+> isn't it? User will think this plugin doesn't work after installtion."
+
+That is the sharpest thing anyone has said about this plugin, and it had been
+true since the first commit.
+
+Every hook opened with `if not ledger_exists(): return  # stay silent`. So
+after a correct install: `plugin list` says enabled, `plugin details` lists
+five hooks, the hooks fire — and nothing happens. **A working install and a
+broken one were byte-for-byte identical from the user's seat.** No observation
+distinguished them. The plugin's entire pitch is that a cold reader can tell
+what is going on, and its own front door failed that test.
+
+### It had been found before and filed under the wrong heading
+
+ADR-0025, three days earlier, in its own words: *"the one step that is easy to
+miss, creating the opt-in directory, reads as an afterthought while being the
+step without which nothing works at all."* The response was a better install
+page. The page now labels step 4 **"the step people miss"**, in bold — which
+is a product shipping a trap and annotating it rather than removing it. Two
+real installs later (ADR-0041, ADR-0042) people were still falling in.
+
+The lesson is about layers. A defect in the product had been diagnosed
+accurately and then fixed in the documentation, because the documentation was
+the thing being written that week.
+
+### What was not done
+
+"Auto-start after install", taken literally, would have been wrong. An
+account-wide install is live in every repository the user opens, and creating
+`docs/project-memory/` in all of them is the behaviour the install guide
+already warns gets a plugin uninstalled. The user's instinct was right about
+the case they were in — a project-scope install — and the question split in
+two: who asked for a ledger here, and what happens when nobody did.
+
+Rejected along the way, each for its own reason:
+
+- **Auto-create at any scope** — creates directories in repositories nobody
+  named.
+- **Another documentation pass** — already tried; see above.
+- **A nudge from every hook** — a line on every edit, prompt and turn end in a
+  project that never opted in is exactly the noise the gate exists to prevent.
+- **A nudge every session** — nagging. Once per project; a user told once who
+  did nothing has chosen. Reversible if once turns out to be too quiet.
+- **Reading `installed_plugins.json` for the scope** — more direct than the
+  settings file, but deeper into the harness and keyed by a path a worktree or
+  a moved checkout would not match.
+
+### What shipped
+
+A project-scope enable now *is* the opt-in: the ledger is created on the next
+session start. Any other unopted project is told once, through both
+`systemMessage` (to the user, who formed the wrong conclusion) and
+`additionalContext` (to the model, who can fix it). The gate itself did not
+move — hooks still do nothing without a ledger. REJ-0009 rejects the silence;
+ADR-0045 records what replaced it.
+
+Two details that only showed up in the building:
+
+**Git does not track empty directories.** Creating the three record folders
+and nothing else leaves `git status` clean, nothing to commit, and the user
+precisely where they started. So a placeholder `00-PROJECT-STATE.md` is written
+too — one that says in its first lines that nobody has written it yet, because
+anything more would be inventing the project's state, which every skill here
+is told never to do.
+
+**The de-duplication marker cannot live in the project.** The premise is that
+this project has no ledger; writing a dotfile into it to record that we
+mentioned ourselves once is the intrusion being avoided. It goes in the
+plugin's data directory under a hash of the project path — and when there is
+nowhere to remember, the notice fires anyway, because a repeated line is a
+smaller failure than silence.
+
+**And auto-creation refuses when the project already keeps notes**, even
+though that project is the one that asked. `docs/project-memory/` beside
+somebody's `docs/adr/` is the duplication `ledger-adopt` exists to prevent and
+REJ-0006 already settled. The notice names that skill instead.
+
+### The seventh instrument
+
+Six rounds of defects came from 82 real projects, a worktree, live sessions, an
+external validator, other people's installs, and a cold read. This one came
+from the user looking at the finished thing and asking what it is *for*. No
+test, no scan and no install trial could have produced it: everything was
+working as specified, and the specification was wrong.
+
+Worth noting what the plugin did do here. Its own `UserPromptSubmit` hook
+flagged that message as a rejection and said to record it verbatim before the
+session ended — which is how REJ-0009 exists and quotes the user rather than
+paraphrasing them. The enforcement layer earned its place on the one occasion
+it was pointed at a decision about itself.

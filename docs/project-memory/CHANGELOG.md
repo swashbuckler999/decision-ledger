@@ -84,3 +84,6 @@ carries the reasoning.
 - 2026-11-26 The activity trail no longer writes paths of files outside the project - see ADR-0043
 - 2026-11-26 **ADR-0044** A test must never write to the project it tests - `docs/project-memory/decisions/ADR-0044-a-test-must-never-write-to-the-project-it-tests.md`
 - 2026-11-26 Fixed: the test suite was writing compaction checkpoints and a Stop-gate baseline into this repository; 318 checks, one of them a footprint guard - see ADR-0044
+- 2026-11-26 **REJ-0009** Silence when a project has not opted in - `docs/project-memory/rejections/REJ-0009-silence-when-a-project-has-not-opted-in.md`
+- 2026-11-26 **ADR-0045** Installing into a project is the opt-in, and silence is never the answer - `docs/project-memory/decisions/ADR-0045-installing-into-a-project-is-the-opt-in-and-sile.md`
+- 2026-11-26 A project-scope install now creates the ledger itself, and a project that has not opted in is told once instead of looking broken - see ADR-0045, REJ-0009

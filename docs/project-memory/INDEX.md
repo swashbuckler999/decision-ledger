@@ -55,6 +55,7 @@ What was chosen, and why.
 | [ADR-0042](decisions/ADR-0042-the-installing-session-cannot-verify-its-own-ins.md) | The installing session cannot verify its own install | accepted | 2026-11-26 |
 | [ADR-0043](decisions/ADR-0043-keep-outside-paths-out-of-the-activity-trail.md) | Keep outside paths out of the activity trail | accepted | 2026-11-26 |
 | [ADR-0044](decisions/ADR-0044-a-test-must-never-write-to-the-project-it-tests.md) | A test must never write to the project it tests | accepted | 2026-11-26 |
+| [ADR-0045](decisions/ADR-0045-installing-into-a-project-is-the-opt-in-and-sile.md) | Installing into a project is the opt-in, and silence is never the answer | accepted | 2026-11-26 |
 
 
 ## Rejections
@@ -71,6 +72,7 @@ Settled arguments. **Read these before proposing anything new.**
 | [REJ-0006](rejections/REJ-0006-migrate-existing-docs-into-records.md) | Migrate existing documents into ledger records | rejected | 2026-11-24 |
 | [REJ-0007](rejections/REJ-0007-publishing-the-owners-project-names.md) | Publishing the owner's project names | rejected | 2026-11-24 |
 | [REJ-0008](rejections/REJ-0008-mine-every-commit-that-states-a-reason.md) | Mine every commit that states a reason | rejected | 2026-11-24 |
+| [REJ-0009](rejections/REJ-0009-silence-when-a-project-has-not-opted-in.md) | Silence when a project has not opted in | rejected | 2026-11-26 |
 
 
 ## Change requests

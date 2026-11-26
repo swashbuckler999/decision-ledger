@@ -134,8 +134,21 @@ notes on stderr. Read the notes, then pick exactly one row:
 
 ## 4. Opt this project in
 
-The hooks stay completely silent until this directory exists. This is the step
-people miss.
+**If you installed at project scope, this already happened.** A project-scope
+enable *is* the opt-in: the next session start creates the three record
+directories and a placeholder `00-PROJECT-STATE.md`, and tells the user it did
+(ADR-0045). Skip to step 5 and fill the placeholder in.
+
+Two exceptions where you still do this by hand:
+
+- **You installed at user scope.** The plugin is available everywhere and
+  active nowhere. Each project opts in separately, with the command below, and
+  an unopted project says so once per project rather than staying silent.
+- **This project already keeps its own notes.** Auto-creation deliberately
+  refuses, because a second set of records beside an existing `docs/adr/` is
+  the duplication `ledger-adopt` exists to prevent. Run that skill instead —
+  it maps the ledger onto what is there and writes nothing until you approve
+  the mapping.
 
 PowerShell:
 
@@ -230,7 +243,9 @@ git commit -m "Add decision-ledger project memory"
 
 | Symptom | Cause | Fix |
 |---|---|---|
+| Hooks never fire, and nothing is said | Pre-0.1.1 copy: the hooks used to exit silently with no ledger | Update the plugin; a current copy says so once per project |
 | Hooks never fire | The opt-in directory is missing | Step 4 |
+| `docs/project-memory/` appeared without being asked for | The plugin is enabled in this project's `.claude/settings.json`, which counts as the opt-in | Expected (ADR-0045). To undo: delete the directory and disable the plugin for this project |
 | Hooks never fire, and the directory exists | The plugin was enabled during this session | Restart or `/clear`. Mid-session enables do not register — step 6 |
 | `Unknown skill: decision-ledger:...` | Same cause | Not a broken install. Follow `skills/<name>/SKILL.md` directly this session; the skills appear after a restart |
 | Enabled for one project, but hooks run everywhere | `claude plugin enable` was run without `--scope`, so the flag went to user settings | Step 2a |

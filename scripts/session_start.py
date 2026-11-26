@@ -73,10 +73,120 @@ def upgrade_note():
         return None
 
 
+def _notice_already_given(root):
+    """Has this project already been told? Remembered outside the project.
+
+    The marker cannot live in the project: the whole point is that the
+    project has no ledger, and writing a dotfile into a repository to say
+    "we mentioned ourselves once" is the kind of thing a plugin gets
+    uninstalled for. It goes in the plugin's own data directory, keyed by a
+    hash of the project path.
+
+    When there is nowhere to remember (no data directory, unwritable disk),
+    say it anyway. A repeated line is a smaller failure than silence, which
+    is the defect this whole mechanism exists to fix.
+    """
+    data = os.environ.get("CLAUDE_PLUGIN_DATA")
+    if not data:
+        return False
+    try:
+        import hashlib
+        key = hashlib.sha256(
+            str(Path(root).resolve()).lower().encode("utf-8")).hexdigest()[:16]
+        stamp = Path(data) / "told-about-optin" / key
+        if stamp.exists():
+            return True
+        stamp.parent.mkdir(parents=True, exist_ok=True)
+        stamp.write_text(L.now_iso(), encoding="utf-8")
+    except Exception:
+        return False
+    return False
+
+
+def not_opted_in(payload):
+    """The project has no ledger. Say so, or create one, but never say nothing.
+
+    Before ADR-0045 every hook returned here in silence, so a correct install
+    and a broken one looked identical from the user's seat: `plugin list` says
+    enabled, `plugin details` lists five hooks, the hooks fire, and nothing
+    whatsoever happens. The user's words: "Everyone will think it is working
+    after installation ... User will think this plugin doesn't work after
+    installtion."
+
+    Two cases:
+
+    - The plugin is switched on in THIS project's settings. The user named
+      this repository, so the ledger is created and the session proceeds as
+      normal -- unless the project already keeps notes of its own, in which
+      case creating a parallel structure is the one thing not to do, and
+      `ledger-adopt` is named instead.
+    - It is switched on account-wide. That makes the plugin available
+      everywhere and chosen nowhere, so nothing is written. The project is
+      told once how to opt in.
+    """
+    root = L.project_dir(payload)
+    existing = L.keeps_own_notes(root)
+
+    if L.project_scope_enabled(root) and not existing:
+        made = L.create_ledger(root)
+        if made:
+            L.emit_context(
+                "SessionStart",
+                "# Project memory (decision-ledger)\n\n"
+                "This project was switched on for decision-ledger and had no "
+                "ledger, so one was just created:\n\n"
+                + "\n".join(f"- `{m}`" for m in made)
+                + "\n\nTell the user in one line that it is now active and "
+                  "that `" + L.DEFAULTS["briefing"] + "` is a placeholder "
+                  "nobody has written. Offer to fill it in from what can be "
+                  "verified -- the code, the README, their own answers -- and "
+                  "do not infer the project's state and present it as fact.",
+                extra={"systemMessage":
+                       "decision-ledger: created "
+                       + L.DEFAULTS["briefing"].rsplit("/", 1)[0]
+                       + "/ for this project. It is empty until something is "
+                         "recorded."})
+        return
+
+    if _notice_already_given(root):
+        return
+
+    if existing:
+        hint = ("This project already keeps its own notes ("
+                + ", ".join(f"`{n}`" for n in existing[:5])
+                + "). Do NOT create a second set beside them -- run the "
+                  "`ledger-adopt` skill, which maps the ledger onto what is "
+                  "already there and writes nothing until the mapping is "
+                  "approved.")
+        short = ("decision-ledger is installed but not active here. This "
+                 "project keeps its own notes -- ask Claude to run "
+                 "ledger-adopt.")
+    else:
+        hint = ("Nothing is being recorded in this project yet. To switch it "
+                "on, create the directory the hooks look for:\n\n"
+                "```\nmkdir -p docs/project-memory/"
+                "{decisions,rejections,change-requests}\n```\n\n"
+                "Then write `" + L.DEFAULTS["briefing"] + "`, or ask for the "
+                "`decision-ledger` skill and it will do both.")
+        short = ("decision-ledger is installed but this project has not "
+                 "opted in, so nothing is being recorded. Ask Claude to set "
+                 "it up, or see docs/project-memory in the plugin's install "
+                 "guide.")
+
+    L.emit_context(
+        "SessionStart",
+        "# Project memory (decision-ledger) -- not active here\n\n"
+        "The plugin is installed and enabled, but this project has no ledger, "
+        "so every hook is doing nothing. Mention this to the user once, in a "
+        "single line, and then carry on with what they asked. Do not create "
+        "anything unless they say so.\n\n" + hint,
+        extra={"systemMessage": short})
+
+
 def body():
     payload = L.read_hook_input()
     if not L.ledger_exists(payload):
-        return  # project does not use the ledger; stay silent
+        return not_opted_in(payload)
 
     parts = ["# Project memory (decision-ledger)", ""]
 

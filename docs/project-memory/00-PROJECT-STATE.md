@@ -26,7 +26,7 @@ Working skeleton, not yet exercised in anger.
   `ledger-adopt`, `ledger-backfill` — done
 - Five hooks: SessionStart, PreCompact, PostToolUse, Stop, UserPromptSubmit — done
 - Record scaffolding and index generation scripts — done
-- Tests — 318 unit checks (`tests/test_hooks.py`) plus a 23-check
+- Tests — 352 unit checks (`tests/test_hooks.py`) plus a 23-check
   twelve-turn session replay (`tests/simulate_session.py`), no model needed.
   One of the 318 is a footprint guard: the suite now fails if it writes
   anything into this project's own ledger, which it had been doing for two
@@ -75,6 +75,12 @@ Working skeleton, not yet exercised in anger.
 - Reading the project cold found the suite writing into the project under
   test: 270 of the activity trail's 271 lines were `pre_compact` run by a
   test, and every run reset the live Stop-gate baseline (ADR-0044)
+- The silent opt-in gate is gone: a project-scope enable now creates the
+  ledger itself, and a project that has not opted in is told once instead of
+  looking broken (ADR-0045, REJ-0009). Raised by the user, who pointed out
+  that a correct install and a broken one looked identical
+- Installed and enabled at project scope in this repository, with the enable
+  verified in `.claude/settings.json` and the user setting left `false`
 - Published — **yes**, https://github.com/swashbuckler999/decision-ledger (public)
 
 ## How it works, in one paragraph
@@ -110,6 +116,12 @@ the user's own words.
 - Are the mining weights in ADR-0016 too parochial? They are tuned on one
   developer's 82 projects, the same concern already noted against ADR-0011.
 - Is `python` on PATH a safe assumption for installers on Windows?
+- Does the ADR-0045 notice land? It reads `.claude/settings.json`, whose shape
+  is Claude Code's, and degrades silently to "not opted in" if that changes.
+  Nothing here would notice.
+- Should `.claude/settings.json` be committed? It would enable the plugin for
+  anyone who clones a public repo without their asking. Currently untracked
+  and not gitignored.
 - Four live sessions, four sets of defects, and the rate is not dropping. The
   fourth came from two correct fixes interacting. How many clean runs are
   enough before submitting to the directory?

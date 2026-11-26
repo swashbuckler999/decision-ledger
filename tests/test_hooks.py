@@ -122,16 +122,32 @@ def test_briefing_without_constraints_file():
 
 
 def test_silent_without_ledger():
-    print("\nNo ledger in project -> every hook stays silent")
+    """A project with no ledger gets nothing recorded and almost nothing said.
+
+    `session_start.py` is the deliberate exception since ADR-0045: it says,
+    once per project, that the plugin is installed and not active here.
+    Without that one line a correct install is indistinguishable from a
+    broken one. The other four stay silent -- a reminder on every edit, every
+    prompt and every turn end in a project that never opted in is the noise
+    that gets a plugin uninstalled.
+    """
+    print("\nNo ledger in project -> the hooks stay silent, bar one notice")
     d = make_repo(with_ledger=False)
     try:
-        for script in ("session_start.py", "post_tool_use.py", "stop_gate.py",
+        for script in ("post_tool_use.py", "stop_gate.py",
                        "user_prompt_submit.py"):
             out, _, code = run_hook(script, {
                 "cwd": str(d), "prompt": "lets go with Parquet",
                 "tool_name": "Edit", "tool_input": {"file_path": str(d / "a.py")},
             })
             check(f"{script} silent", out == "" and code == 0, f"out={out[:60]!r}")
+
+        out, _, code = run_hook("session_start.py", {
+            "cwd": str(d), "hook_event_name": "SessionStart"})
+        check("session_start.py says the project is not opted in",
+              code == 0 and "not opted in" in out, f"out={out[:80]!r}")
+        check("and injects no briefing it does not have",
+              "Settled rejections" not in out, f"out={out[:80]!r}")
     finally:
         shutil.rmtree(d, ignore_errors=True)
 
@@ -2179,7 +2195,7 @@ def test_version_check_reports_and_never_phones_home():
         check(f"makes no use of {banned}", banned not in src)
 
     check("reports this plugin's own version",
-          check_version.installed_version(ROOT) == "0.1.0",
+          check_version.installed_version(ROOT) == "0.1.1",
           str(check_version.installed_version(ROOT)))
 
     d = Path(tempfile.mkdtemp(prefix="ledger-ver-"))
@@ -2242,6 +2258,177 @@ def test_activity_trail_never_records_a_path_outside_the_project():
         shutil.rmtree(d, ignore_errors=True)
         shutil.rmtree(outside, ignore_errors=True)
 
+
+
+def _session_start_in(d, env_extra=None):
+    """SessionStart against a project, with no project override in the env."""
+    e = dict(os.environ)
+    e.pop("LEDGER_PROJECT_DIR", None)
+    e.pop("LEDGER_STRICT", None)
+    e.pop("CLAUDE_PLUGIN_DATA", None)
+    if env_extra:
+        e.update(env_extra)
+    p = subprocess.run(
+        [sys.executable, str(SCRIPTS / "session_start.py")],
+        input=json.dumps({"cwd": str(d), "hook_event_name": "SessionStart",
+                          "source": "startup"}),
+        capture_output=True, text=True, env=e, timeout=30)
+    j = as_json(p.stdout)
+    hso = (j or {}).get("hookSpecificOutput", {})
+    return hso.get("additionalContext", ""), hso.get("systemMessage", ""), p
+
+
+def _enable_for_project(d):
+    (d / ".claude").mkdir(exist_ok=True)
+    (d / ".claude" / "settings.json").write_text(
+        json.dumps({"enabledPlugins": {"decision-ledger@sayan-skills": True}}),
+        encoding="utf-8")
+
+
+def test_a_project_that_has_not_opted_in_is_told_so():
+    """The defect that made a correct install look like a broken one.
+
+    Every hook used to return in silence when `docs/project-memory/` was
+    absent, so `plugin list` said enabled, `plugin details` listed five
+    hooks, the hooks fired, and nothing happened -- indistinguishable from a
+    plugin that does not work. The user, in their own words: "Everyone will
+    think it is working after installation, but effectively it needs another
+    command to start."
+
+    The gate still holds: nothing is written in a project that only has the
+    plugin available account-wide. But it now says so.
+    """
+    print("\nNot opted in")
+    d = make_repo(with_ledger=False)
+    data = Path(tempfile.mkdtemp(prefix="ledger-pdata-"))
+    try:
+        ctx, msg, p = _session_start_in(d)
+        check("the hook survives a project with no ledger", p.returncode == 0,
+              p.stderr[-140:])
+        check("it no longer stays silent", bool(ctx) and bool(msg), repr(ctx[:60]))
+        check("the user is told the plugin is not active here",
+              "not opted in" in msg or "not active" in msg, msg)
+        check("the model is told to mention it and then carry on",
+              "single line" in ctx and "carry on" in ctx, ctx[:200])
+        check("it names the command that switches it on",
+              "mkdir" in ctx and "docs/project-memory" in ctx, ctx[:200])
+        check("and it still writes nothing",
+              not (d / "docs").exists(), str(list(d.iterdir())))
+
+        env = {"CLAUDE_PLUGIN_DATA": str(data)}
+        first = _session_start_in(d, env)[1]
+        second = _session_start_in(d, env)[1]
+        check("it says it once per project, not once per session",
+              bool(first) and not second, f"{first[:40]!r} then {second[:40]!r}")
+        check("remembering it leaves nothing in the project",
+              not any(x.name.startswith(".ledger") for x in d.iterdir()),
+              str(list(d.iterdir())))
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+        shutil.rmtree(data, ignore_errors=True)
+
+
+def test_a_project_scope_enable_creates_the_ledger():
+    """Installing into THIS project is the opt-in; asking twice buys nothing.
+
+    A user who runs `--scope project` named the repository. Making them then
+    create a directory to confirm what they just asked for is the step the
+    install guide itself calls "the step people miss".
+    """
+    print("\nProject-scope enable opts the project in")
+    d = make_repo(with_ledger=False)
+    try:
+        _enable_for_project(d)
+        ctx, msg, p = _session_start_in(d)
+        lm = d / "docs" / "project-memory"
+        check("the ledger directories are created",
+              (lm / "decisions").is_dir() and (lm / "rejections").is_dir()
+              and (lm / "change-requests").is_dir(), str(lm))
+        check("a placeholder briefing is created too, so git has something to see",
+              (lm / "00-PROJECT-STATE.md").is_file())
+        body = (lm / "00-PROJECT-STATE.md").read_text(encoding="utf-8")
+        check("the placeholder says plainly that nobody has written it",
+              "Nobody has written this yet" in body, body[:200])
+        check("the user is told what was created", "created" in msg, msg)
+        check("the model is told not to invent the project's state",
+              "present it as fact" in ctx, ctx[-300:])
+
+        ctx2, _msg2, _p2 = _session_start_in(d)
+        check("the next session gets the real briefing instead",
+              "Settled rejections" in ctx2, ctx2[:120])
+
+        (lm / "00-PROJECT-STATE.md").write_text("# Mine\n", encoding="utf-8")
+        _session_start_in(d)
+        check("a briefing that exists is never overwritten",
+              (lm / "00-PROJECT-STATE.md").read_text(encoding="utf-8") == "# Mine\n")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_a_project_with_its_own_notes_is_never_given_a_second_set():
+    """The one thing auto-creation must not do.
+
+    `docs/project-memory/` created beside a project's own `docs/adr/` is the
+    duplication `ledger-adopt` exists to prevent, and REJ-0006 settled that
+    existing documents are pointed at, not migrated. So the scope signal is
+    not enough on its own: a project that already keeps notes gets named the
+    adopt skill and nothing is written, even when it is the one that asked.
+    """
+    print("\nA project that already keeps notes")
+    for note in ("CHANGELOG.md", "DECISIONS.md", "docs/STATUS.md"):
+        d = make_repo(with_ledger=False)
+        try:
+            _enable_for_project(d)
+            target = d / note
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("# Notes\n\n- 2026-01-01 a thing\n", encoding="utf-8")
+            ctx, msg, _p = _session_start_in(d)
+            check(f"{note}: no parallel ledger is created",
+                  not (d / "docs" / "project-memory").exists())
+            check(f"{note}: ledger-adopt is named instead",
+                  "ledger-adopt" in ctx and "ledger-adopt" in msg, msg)
+            check(f"{note}: the file it found is quoted back",
+                  Path(note).name in ctx, ctx[-200:])
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+
+def test_the_scope_signal_reads_only_a_real_project_enable():
+    """What may and may not stand in for "the user chose this project"."""
+    print("\nThe project-scope signal")
+    on = '{"enabledPlugins": {"decision-ledger@sayan-skills": true}}'
+    other_market = '{"enabledPlugins": {"decision-ledger@other-market": true}}'
+    off = '{"enabledPlugins": {"decision-ledger@sayan-skills": false}}'
+    someone_else = '{"enabledPlugins": {"something-else@x": true}}'
+    lookalike = '{"enabledPlugins": {"decision-ledger-extra@x": true}}'
+    wrong_shape = '{"enabledPlugins": []}'
+    cases = [
+        (on, True, "a project enable"),
+        (other_market, True, "the same plugin from another marketplace"),
+        (off, False, "an explicit disable"),
+        (someone_else, False, "somebody else's plugin"),
+        (lookalike, False, "a plugin whose name merely starts the same"),
+        (wrong_shape, False, "the wrong shape"),
+        ("not json at all", False, "a file that is not JSON"),
+        ("", False, "an empty file"),
+    ]
+    sys.path.insert(0, str(SCRIPTS))
+    import _ledger as L
+    for text, expected, name in cases:
+        d = Path(tempfile.mkdtemp(prefix="ledger-scope-"))
+        try:
+            (d / ".claude").mkdir()
+            (d / ".claude" / "settings.json").write_text(text, encoding="utf-8")
+            got = L.project_scope_enabled(d)
+            check(f"{name} -> {expected}", got is expected, f"got {got}")
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+    d = Path(tempfile.mkdtemp(prefix="ledger-scope-"))
+    try:
+        check("no settings file at all -> False",
+              L.project_scope_enabled(d) is False)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
 
 
 def _own_ledger_fingerprint():
@@ -2348,7 +2535,11 @@ def main():
               test_decisions_document_is_read_not_ignored,
               test_non_ascii_survives_the_scripts,
               test_version_check_reports_and_never_phones_home,
-              test_activity_trail_never_records_a_path_outside_the_project):
+              test_activity_trail_never_records_a_path_outside_the_project,
+              test_a_project_that_has_not_opted_in_is_told_so,
+              test_a_project_scope_enable_creates_the_ledger,
+              test_a_project_with_its_own_notes_is_never_given_a_second_set,
+              test_the_scope_signal_reads_only_a_real_project_enable):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test

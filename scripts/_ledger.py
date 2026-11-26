@@ -789,6 +789,166 @@ def title_of(path):
     return path.stem
 
 
+
+# ---------------------------------------------------------------------------
+# Opting a project in
+#
+# Every hook exits silently when the project has no ledger (ADR-0045 reverses
+# the silence, not the gate). These three helpers decide whether this project
+# asked for one, whether it already keeps notes of its own, and how to create
+# the ledger when the answer is yes.
+# ---------------------------------------------------------------------------
+
+PLUGIN_KEY_PREFIX = "decision-ledger"
+
+
+def _enabled_in(path):
+    """True if `path` is a settings file that switches this plugin on.
+
+    Anything unreadable, non-JSON or of the wrong shape counts as "no", for
+    the reason ADR-0020 gives: a config we cannot parse is not evidence of
+    anything, and guessing from it is worse than ignoring it.
+    """
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except Exception:
+        return False
+    plugins = data.get("enabledPlugins") if isinstance(data, dict) else None
+    if not isinstance(plugins, dict):
+        return False
+    for key, value in plugins.items():
+        if isinstance(key, str) and key.split("@")[0] == PLUGIN_KEY_PREFIX:
+            if value is True:
+                return True
+    return False
+
+
+def project_scope_enabled(root):
+    """True if THIS project's own settings switch the plugin on.
+
+    That is the only signal available for "the user asked for it here". An
+    install at user scope says the plugin is available everywhere and chosen
+    nowhere, so it cannot imply consent for any particular repository.
+
+    Reading the harness's settings file is the weak point: the path and the
+    `enabledPlugins` shape are Claude Code's, not ours, and if either changes
+    this returns False. That is the safe direction -- the project is then
+    treated as not opted in and told so, which is the old behaviour plus a
+    sentence.
+    """
+    root = Path(root)
+    for name in ("settings.json", "settings.local.json"):
+        if _enabled_in(root / ".claude" / name):
+            return True
+    return False
+
+
+def keeps_own_notes(root):
+    """Names of the project's existing notes, if it keeps any.
+
+    Auto-creating `docs/project-memory/` beside a project's own `docs/adr/`
+    manufactures the duplication `ledger-adopt` exists to prevent, so this is
+    checked before anything is written.
+
+    Deliberately cheap: file names in the root and one level into `docs/`,
+    plus the known memory directories. No git, no file contents, no history
+    mining -- this runs inside a SessionStart hook with a timeout, on
+    repositories of unknown size.
+    """
+    root = Path(root)
+    try:
+        import scan_project as S
+    except Exception:
+        return []
+
+    interesting = ("changelog", "status", "journey", "decisions",
+                   "rejections", "constraints")
+    found = []
+
+    def look(folder, limit=200):
+        if not folder.is_dir():
+            return
+        try:
+            entries = sorted(folder.iterdir())[:limit]
+        except OSError:
+            return
+        for f in entries:
+            if f.is_file() and S.role_of(f) in interesting:
+                found.append(f.name)
+
+    look(root)
+    look(root / "docs")
+    for rel in S.MEMORY_DIRS:
+        d = root / rel
+        if d.as_posix().endswith("project-memory"):
+            continue  # our own layout is not somebody else's notes
+        try:
+            if d.is_dir() and any(p.is_file() for p in d.iterdir()):
+                found.append(rel + "/")
+        except OSError:
+            pass
+    return sorted(set(found))
+
+
+STUB_BRIEFING = """\
+# Project state
+
+**Updated:** {date}
+
+> Created automatically when decision-ledger was switched on for this project.
+> **Nobody has written this yet.** Everything below is a prompt, not a record.
+> Do not treat an empty section as a statement that there is nothing to say.
+
+Read this first. Keep it under 150 lines: it is the briefing, not the history.
+Detail belongs in the numbered records under `decisions/`, `rejections/` and
+`change-requests/`.
+
+## What this is
+
+_Not yet written._
+
+## Current status
+
+_Not yet written._
+
+## Immediate next steps
+
+_Not yet written._
+
+## Open questions
+
+_Not yet written._
+"""
+
+
+def create_ledger(root):
+    """Create the ledger directories and a placeholder briefing.
+
+    Returns the list of paths created, relative to the project, or [] if
+    everything already existed. Never touches a file that is already there
+    (ADR-0008).
+
+    The placeholder is written because git does not track empty directories:
+    without a file in it, the whole opt-in is invisible to `git status`, there
+    is nothing to commit, and the user is left exactly where they started --
+    unable to tell a working install from a broken one.
+    """
+    root = Path(root).resolve()
+    made = []
+    # DEFAULTS, not path_for(): a project with a `.ledger.json` is already
+    # opted in, so there is no config to respect here and nothing to map onto.
+    for key in ("decisions", "rejections", "change_requests"):
+        d = root / DEFAULTS[key]
+        if not d.is_dir():
+            d.mkdir(parents=True, exist_ok=True)
+            made.append(DEFAULTS[key] + "/")
+    briefing = root / DEFAULTS["briefing"]
+    if not briefing.exists():
+        _write_atomic(briefing, STUB_BRIEFING.format(date=today()))
+        made.append(DEFAULTS["briefing"])
+    return made
+
+
 def emit_context(event, text, extra=None):
     """Emit additionalContext in the shape Claude Code actually reads.
 

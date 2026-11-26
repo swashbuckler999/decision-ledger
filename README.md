@@ -126,13 +126,19 @@ claude plugin install decision-ledger@sayan-skills --scope project
 claude plugin install decision-ledger@sayan-skills --scope user
 ```
 
-**3 · Opt the project in** — the hooks stay silent until this exists
+**3 · Opt the project in** — *a project-scope install already did this.* The
+next session creates the ledger and says so. You only run this yourself after
+a `--scope user` install, where each project opts in on its own:
 
 ```powershell
 mkdir docs\project-memory\decisions, docs\project-memory\rejections, docs\project-memory\change-requests
 ```
 
 <sub>bash / zsh: <code>mkdir -p docs/project-memory/{decisions,rejections,change-requests}</code></sub>
+
+<sub>A project that has not opted in is told so once, rather than looking
+broken. And if your project already keeps its own notes, nothing is created
+beside them — see step 4.</sub>
 
 **4 · Ask which situation your project is in**
 
@@ -569,9 +575,9 @@ built and thrown away.
 
 ### Current status
 
-> **v0.1.0 — early, and specific about why.**
+> **v0.1.1 — early, and specific about why.**
 >
-> **Covered:** 317 unit checks and a 23-check session replay. Read-only passes
+> **Covered:** 352 unit checks and a 23-check session replay. Read-only passes
 > over 82 real projects. The write path run against copies of three real
 > projects, with the originals proved byte-identical. Four live sessions, in
 > which all five hooks were observed firing and all five skills invoked —

@@ -43,6 +43,33 @@ Three ways, in increasing order of effort:
 
 ---
 
+## 0.1.1
+
+**An installed plugin no longer looks broken.**
+
+Before this version the hooks did nothing, and said nothing, in a project
+without a `docs/project-memory/` directory. A correct install and a broken one
+were indistinguishable: `plugin list` said enabled, five hooks were listed,
+and nothing happened.
+
+- **A project-scope install is now the opt-in.** If the plugin is enabled in a
+  project's own `.claude/settings.json`, the ledger is created at the next
+  session start and you are told it was. No second command.
+  See [ADR-0045](project-memory/decisions/ADR-0045-installing-into-a-project-is-the-opt-in-and-sile.md).
+- **A project that has not opted in is told once**, instead of staying silent.
+  Once per project, not once per session, and nothing is written.
+  See [REJ-0009](project-memory/rejections/REJ-0009-silence-when-a-project-has-not-opted-in.md).
+- **A project that already keeps its own notes is never given a second set.**
+  Auto-creation refuses and names `ledger-adopt` instead.
+- **Fixed:** the test suite had been writing compaction checkpoints and a
+  Stop-gate baseline into the plugin's own repository. It does not affect
+  installed copies, and the suite now fails if it ever writes to the project
+  it is testing.
+  See [ADR-0044](project-memory/decisions/ADR-0044-a-test-must-never-write-to-the-project-it-tests.md).
+
+Nothing in your ledger changes, and nothing is migrated. Upgrading is the two
+commands above.
+
 ## 0.1.0
 
 First public release.
