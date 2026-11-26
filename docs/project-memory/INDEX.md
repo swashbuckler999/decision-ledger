@@ -51,6 +51,9 @@ What was chosen, and why.
 | [ADR-0038](decisions/ADR-0038-report-a-record-history-kept-in-one-file.md) | Report a record history kept in one file | accepted | 2026-11-26 |
 | [ADR-0039](decisions/ADR-0039-read-a-decisions-document-as-a-source.md) | Read a decisions document as a source | accepted | 2026-11-26 |
 | [ADR-0040](decisions/ADR-0040-tell-users-a-newer-version-exists-without-phonin.md) | Tell users a newer version exists, without phoning home | accepted | 2026-11-26 |
+| [ADR-0041](decisions/ADR-0041-enable-takes-its-own-scope-and-the-install-page-.md) | Enable takes its own scope, and the install page must say so | accepted | 2026-11-26 |
+| [ADR-0042](decisions/ADR-0042-the-installing-session-cannot-verify-its-own-ins.md) | The installing session cannot verify its own install | accepted | 2026-11-26 |
+| [ADR-0043](decisions/ADR-0043-keep-outside-paths-out-of-the-activity-trail.md) | Keep outside paths out of the activity trail | accepted | 2026-11-26 |
 
 
 ## Rejections

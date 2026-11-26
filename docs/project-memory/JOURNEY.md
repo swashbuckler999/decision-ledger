@@ -868,3 +868,54 @@ printed**. `Café` reached the skill as `Caf?`, in the very worklist used to
 quote an author's own words verbatim. The data was always read correctly; only
 the printing was lossy, which is why it survived — the pipeline looked right
 on both sides of the break.
+
+## 2026-11-26 — a second real install, and two states this repo cannot produce
+
+A different project installed the plugin and then tried to upgrade it. Two
+findings came back, and neither was reachable from inside this repository.
+
+**`enable` has its own `--scope`, and it does not inherit the install's.**
+The plugin was installed at project scope but disabled — a state no fixture
+here has ever had. The obvious next command, `claude plugin enable
+<plugin>`, reported `(scope: user)` and wrote the enable into the user
+settings file. So an agent following `AGENT-INSTALL.md` literally, never
+typing `--scope user`, lands the hooks in every repository the user opens —
+exactly what step 2 spends a bold paragraph forbidding.
+
+Worse, the page's own verification passes: `claude plugin list` still reports
+`Scope: project`, because the listing reflects where the install is declared,
+not where the enable went. Verified here: `enable --help` confirms
+`-s, --scope <scope>` defaults to auto-detect. Recorded as ADR-0041.
+
+**An installing session cannot verify its own install.** After a correct
+install, invoking the skill the page tells you to use returns `Unknown skill`.
+Nothing is wrong: hooks and skills enabled mid-session are not picked up by
+the session that enabled them. The page said to start a new session for the
+hook check but never said why, nor that the installing agent itself cannot
+run it — leaving an agent with an install that looks broken by its own
+documented next step, and every available wrong conclusion making it worse.
+ADR-0042.
+
+### And one they found by looking at what the plugin wrote
+
+That session also checked what the activity trail records when the edited
+file is **outside** the project, and found its own edit to a file under
+`~/.ssh` written out as a full absolute path, home directory and username
+included. The gitignore held — it never reached the remote, which they
+verified independently against what had been pushed — but the file still sits
+in the repository folder, written automatically on every edit, with nobody
+reviewing it.
+
+Fixed in ADR-0043: the event is kept, the path is not.
+
+### What this round says about method
+
+Both install findings needed states this repository cannot produce: a plugin
+installed but disabled, and a skill invoked in the session that enabled it.
+The trail finding needed somebody to edit a file outside the project and then
+read the log.
+
+That is now five distinct instruments — 82 real projects, a worktree, live
+sessions, an external validator, and other people's installs — and the test
+suite has still never been the one to find a defect of consequence. It
+confirms; it does not discover.

@@ -80,3 +80,5 @@ carries the reasoning.
 - 2026-11-26 Fixed: non-ASCII was mangled when any script printed it on Windows
 - 2026-11-26 **ADR-0041** Enable takes its own scope, and the install page must say so - `docs/project-memory/decisions/ADR-0041-enable-takes-its-own-scope-and-the-install-page-.md`
 - 2026-11-26 **ADR-0042** The installing session cannot verify its own install - `docs/project-memory/decisions/ADR-0042-the-installing-session-cannot-verify-its-own-ins.md`
+- 2026-11-26 **ADR-0043** Keep outside paths out of the activity trail - `docs/project-memory/decisions/ADR-0043-keep-outside-paths-out-of-the-activity-trail.md`
+- 2026-11-26 The activity trail no longer writes paths of files outside the project - see ADR-0043

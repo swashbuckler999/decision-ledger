@@ -42,7 +42,13 @@ def body():
     try:  # show the path relative to the project when we can
         target = str(Path(target).resolve().relative_to(L.project_dir(payload).resolve()))
     except Exception:
-        pass
+        # Outside the project. Record that it happened, never where: the full
+        # path would carry a home directory and a username into a file that
+        # lives in the project, and this trail exists to reconstruct work on
+        # THIS project, which an outside path does not help with. A real
+        # install noticed its own edit to a file under ~/.ssh being written
+        # out in full.
+        target = "(a file outside the project)"
 
     if L.is_ledger_path(target, payload):
         return  # do not log edits to the ledger itself

@@ -2175,6 +2175,46 @@ def test_version_check_reports_and_never_phones_home():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_activity_trail_never_records_a_path_outside_the_project():
+    """An out-of-project edit used to be logged with its full absolute path.
+
+    A real installation spotted its own edit to a file under `~/.ssh` being
+    written out in full, into a file that lives in the project. The trail is
+    gitignored so it never reaches a remote, but it still carried a home
+    directory and a username into the repository folder, and an outside path
+    does not help reconstruct work on THIS project, which is the trail's only
+    job.
+    """
+    print("\nThe activity trail stays inside the project")
+    d = make_repo()
+    outside = Path(tempfile.mkdtemp(prefix="ledger-outside-"))
+    try:
+        (d / "inside.py").write_text("x\n", encoding="utf-8")
+        secret = outside / "config"
+        secret.write_text("Host example\n", encoding="utf-8")
+
+        for target in (d / "inside.py", secret):
+            run_hook("post_tool_use.py", {
+                "cwd": str(d), "hook_event_name": "PostToolUse",
+                "tool_name": "Edit", "tool_input": {"file_path": str(target)}})
+
+        trail = next((d / "docs" / "project-memory" / "activity").glob("*.md"))
+        body = trail.read_text(encoding="utf-8")
+
+        check("the in-project edit is recorded by its relative path",
+              "`inside.py`" in body, body)
+        check("the outside edit is still recorded as having happened",
+              "outside the project" in body, body)
+        check("but its path is not written down",
+              str(outside) not in body, body)
+        check("and no drive letter or home directory leaks in",
+              not re.search(r"[A-Za-z]:[\\/]", body)
+              and "/home/" not in body and "/Users/" not in body, body)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+        shutil.rmtree(outside, ignore_errors=True)
+
+
 def main():
     print("decision-ledger hook tests")
     for t in (test_session_start, test_briefing_without_constraints_file,
@@ -2228,7 +2268,8 @@ def main():
               test_a_decisions_directory_is_still_adopted,
               test_decisions_document_is_read_not_ignored,
               test_non_ascii_survives_the_scripts,
-              test_version_check_reports_and_never_phones_home):
+              test_version_check_reports_and_never_phones_home,
+              test_activity_trail_never_records_a_path_outside_the_project):
         try:
             t()
         except Exception as exc:  # a crashing test is a failing test
