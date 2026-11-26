@@ -1,6 +1,6 @@
 # Project state
 
-**Updated:** 2026-11-25
+**Updated:** 2026-11-26
 
 Read this first. It is capped at 150 lines on purpose: it is the briefing, not
 the history. Detail lives in the numbered records; see `INDEX.md` for the map.
@@ -26,8 +26,11 @@ Working skeleton, not yet exercised in anger.
   `ledger-adopt`, `ledger-backfill` — done
 - Five hooks: SessionStart, PreCompact, PostToolUse, Stop, UserPromptSubmit — done
 - Record scaffolding and index generation scripts — done
-- Tests — 317 unit checks (`tests/test_hooks.py`) plus a 23-check
-  twelve-turn session replay (`tests/simulate_session.py`), no model needed
+- Tests — 318 unit checks (`tests/test_hooks.py`) plus a 23-check
+  twelve-turn session replay (`tests/simulate_session.py`), no model needed.
+  One of the 318 is a footprint guard: the suite now fails if it writes
+  anything into this project's own ledger, which it had been doing for two
+  days without a single check noticing (ADR-0044)
 - The three adoption situations (fresh / undocumented / documented) —
   simulated against sandbox copies, all three now handled
 - The three environments (worktree / no git / unusual config) — covered after
@@ -69,6 +72,9 @@ Working skeleton, not yet exercised in anger.
 - Two real installs by other sessions found `enable --scope` landing hooks
   user-wide (ADR-0041), a session unable to verify its own install
   (ADR-0042), and outside paths in the activity trail (ADR-0043)
+- Reading the project cold found the suite writing into the project under
+  test: 270 of the activity trail's 271 lines were `pre_compact` run by a
+  test, and every run reset the live Stop-gate baseline (ADR-0044)
 - Published — **yes**, https://github.com/swashbuckler999/decision-ledger (public)
 
 ## How it works, in one paragraph

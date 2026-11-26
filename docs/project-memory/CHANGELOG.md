@@ -82,3 +82,5 @@ carries the reasoning.
 - 2026-11-26 **ADR-0042** The installing session cannot verify its own install - `docs/project-memory/decisions/ADR-0042-the-installing-session-cannot-verify-its-own-ins.md`
 - 2026-11-26 **ADR-0043** Keep outside paths out of the activity trail - `docs/project-memory/decisions/ADR-0043-keep-outside-paths-out-of-the-activity-trail.md`
 - 2026-11-26 The activity trail no longer writes paths of files outside the project - see ADR-0043
+- 2026-11-26 **ADR-0044** A test must never write to the project it tests - `docs/project-memory/decisions/ADR-0044-a-test-must-never-write-to-the-project-it-tests.md`
+- 2026-11-26 Fixed: the test suite was writing compaction checkpoints and a Stop-gate baseline into this repository; 318 checks, one of them a footprint guard - see ADR-0044

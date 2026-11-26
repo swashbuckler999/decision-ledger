@@ -54,6 +54,7 @@ What was chosen, and why.
 | [ADR-0041](decisions/ADR-0041-enable-takes-its-own-scope-and-the-install-page-.md) | Enable takes its own scope, and the install page must say so | accepted | 2026-11-26 |
 | [ADR-0042](decisions/ADR-0042-the-installing-session-cannot-verify-its-own-ins.md) | The installing session cannot verify its own install | accepted | 2026-11-26 |
 | [ADR-0043](decisions/ADR-0043-keep-outside-paths-out-of-the-activity-trail.md) | Keep outside paths out of the activity trail | accepted | 2026-11-26 |
+| [ADR-0044](decisions/ADR-0044-a-test-must-never-write-to-the-project-it-tests.md) | A test must never write to the project it tests | accepted | 2026-11-26 |
 
 
 ## Rejections

@@ -919,3 +919,63 @@ That is now five distinct instruments — 82 real projects, a worktree, live
 sessions, an external validator, and other people's installs — and the test
 suite has still never been the one to find a defect of consequence. It
 confirms; it does not discover.
+
+## 2026-11-26 — read cold, and the trail turned out to be test output
+
+A session opened the project with no prior context and read the docs. Two
+things in the activity trail looked wrong: every line was a compaction
+checkpoint, four at a time, one second apart, with `trigger: unknown` — and
+there were no tool entries at all, in a repository that had been edited for
+three days.
+
+Only one of those was a defect.
+
+**The missing tool entries are by design and already written down**, in
+`post_tool_use.py`'s own docstring: the hook matches `Edit|Write|NotebookEdit`,
+a file changed through the shell leaves no entry, a live session found that
+directly, and in permission modes that encourage the shell the
+under-recording is the normal case. Matching `Bash` too was considered and
+rejected. ADR-0028 settles it: the trail is a hint, never evidence. The cold
+reader's first instinct — "this is broken" — was answered by the docs in the
+file it was reading, which is the thing the project is for.
+
+**The duplicate checkpoints were real, and they came from the test suite.**
+`test_hooks_survive_hostile_payloads` exists to feed the hooks garbage, and
+four of its payloads carry no usable `cwd`. Alone in the file it set no
+project override, so `project_dir()` fell back to `os.getcwd()`, found this
+repository's ledger, and the hooks did their job on it: four compaction
+checkpoints appended to the live trail per run, and `.git/ledger-baseline`
+rewritten — the Stop gate's memory of what was already dirty when the session
+started (ADR-0033). Run the tests mid-session and you quietly change what the
+Stop hook reports for the rest of it.
+
+270 of the trail's 271 lines were put there this way. Exactly one compaction
+has ever been recorded here: `2026-11-24 16:56:31 (trigger: auto)`.
+
+### Why 317 passing checks never noticed
+
+Because nothing was failing. Every hook behaved exactly as specified; it was
+pointed at the wrong project. The suite asserted on what the hooks returned
+and on sandbox contents, and never once on whether running it had changed the
+repository it ran in. A test aimed at the wrong target still passes.
+
+So the fix is two lines of `cwd=` and the guard is the real work:
+`test_the_suite_leaves_this_repository_alone` fingerprints the activity trail
+and the `.git/ledger-*` markers before the first test and compares after the
+last. It was verified by putting the leak back — it fails and names both
+artefacts — then taking it out again. 318 checks, zero footprint.
+
+### The pattern, for the sixth time
+
+The route not taken: making the hooks refuse to write when the payload has no
+`cwd`. That would have "fixed" the symptom and broken the plugin, because the
+cwd fallback is the last resort that a live session already proved necessary
+when every environment variable came back empty. Pinning the test with
+`LEDGER_PROJECT_DIR` was also wrong — it outranks the payload, so it would
+have neutralised the very `cwd` values the test exists to send. The fix had to
+leave the subject of the test untouched.
+
+And again the finding came from an instrument, not from reading code: this
+time from somebody arriving with no memory of the project and asking why a
+file looked odd. The test suite has still never found a defect of consequence
+here. That is now six distinct instruments, and the newest one is the cheapest.

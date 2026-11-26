@@ -1470,30 +1470,58 @@ def test_failed_write_leaves_no_temp_file():
 
 
 def test_hooks_survive_hostile_payloads():
-    """Every hook, against every shape of wrong input a harness might send."""
+    """Every hook, against every shape of wrong input a harness might send.
+
+    Half of these payloads carry no usable `cwd`, which is the point: a hook
+    must survive one. But `project_dir()` then falls back to the process
+    working directory, and that fallback is load-bearing in real use -- a live
+    session had `LEDGER_PROJECT_DIR`, `CLAUDE_PROJECT_DIR` and
+    `CLAUDE_PLUGIN_ROOT` all empty, leaving cwd as the only thing left.
+
+    So these subprocesses run with cwd pinned to a sandbox. Without that they
+    inherit the suite's own working directory, find THIS repository's ledger,
+    and write to it for real: four compaction checkpoints into the activity
+    trail on every run, plus a rewrite of `.git/ledger-baseline`, which is the
+    Stop gate's record of what was already dirty when the session began. 270
+    of the 271 lines in this repo's trail were put there by this test, not by
+    any compaction. `test_the_suite_leaves_this_repository_alone` now fails if
+    it happens again.
+
+    `LEDGER_PROJECT_DIR` is deliberately not used for the pinning: it outranks
+    the payload, so it would also neutralise the `cwd` each payload carries,
+    and those are the subject of the test.
+    """
     print("\nHostile hook payloads")
-    payloads = [
-        {"hook_event_name": "Stop"},
-        {"cwd": r"Z:\no\such\place", "hook_event_name": "Stop"},
-        {"cwd": None, "hook_event_name": "Stop"},
-        {"cwd": 42, "hook_event_name": "Stop"},
-        [],
-    ]
-    for script in ("session_start.py", "stop_gate.py", "post_tool_use.py",
-                   "user_prompt_submit.py", "pre_compact.py"):
-        bad = []
-        for payload in payloads:
-            p = subprocess.run([sys.executable, str(SCRIPTS / script)],
-                               input=json.dumps(payload), capture_output=True,
-                               text=True, timeout=30)
-            if p.returncode != 0 or "Traceback" in p.stderr:
-                bad.append(f"{payload}(rc={p.returncode})")
-        for raw in ("", "not json at all"):
-            p = subprocess.run([sys.executable, str(SCRIPTS / script)], input=raw,
-                               capture_output=True, text=True, timeout=30)
-            if p.returncode != 0 or "Traceback" in p.stderr:
-                bad.append(f"raw {raw!r}(rc={p.returncode})")
-        check(f"{script} survives every bad payload", not bad, "; ".join(bad[:3]))
+    d = make_repo()
+    try:
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(d))
+        env.pop("LEDGER_PROJECT_DIR", None)
+        env.pop("LEDGER_STRICT", None)
+        payloads = [
+            {"hook_event_name": "Stop"},
+            {"cwd": r"Z:\no\such\place", "hook_event_name": "Stop"},
+            {"cwd": None, "hook_event_name": "Stop"},
+            {"cwd": 42, "hook_event_name": "Stop"},
+            [],
+        ]
+        for script in ("session_start.py", "stop_gate.py", "post_tool_use.py",
+                       "user_prompt_submit.py", "pre_compact.py"):
+            bad = []
+            for payload in payloads:
+                p = subprocess.run([sys.executable, str(SCRIPTS / script)],
+                                   input=json.dumps(payload), capture_output=True,
+                                   text=True, timeout=30, cwd=str(d), env=env)
+                if p.returncode != 0 or "Traceback" in p.stderr:
+                    bad.append(f"{payload}(rc={p.returncode})")
+            for raw in ("", "not json at all"):
+                p = subprocess.run([sys.executable, str(SCRIPTS / script)], input=raw,
+                                   capture_output=True, text=True, timeout=30,
+                                   cwd=str(d), env=env)
+                if p.returncode != 0 or "Traceback" in p.stderr:
+                    bad.append(f"raw {raw!r}(rc={p.returncode})")
+            check(f"{script} survives every bad payload", not bad, "; ".join(bad[:3]))
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
 
 
 def test_unborn_and_detached_head():
@@ -2215,8 +2243,59 @@ def test_activity_trail_never_records_a_path_outside_the_project():
         shutil.rmtree(outside, ignore_errors=True)
 
 
+
+def _own_ledger_fingerprint():
+    """What this repository's own ledger state looks like, byte for byte.
+
+    Deliberately not a hash of the whole tree: the suite is expected to leave
+    the source alone, and what it has actually damaged in the past is the
+    ledger -- the activity trail and the Stop gate's markers in `.git/`.
+    """
+    fp = {}
+    activity = ROOT / "docs" / "project-memory" / "activity"
+    if activity.is_dir():
+        for f in sorted(activity.iterdir()):
+            if f.is_file():
+                fp[f"activity/{f.name}"] = f.stat().st_size
+    gd = ROOT / ".git"
+    if gd.is_dir():
+        for f in sorted(gd.glob("ledger-*")):
+            fp[f".git/{f.name}"] = f.read_bytes()
+    return fp
+
+
+def test_the_suite_leaves_this_repository_alone(before):
+    """The tests must not write to the project they are testing.
+
+    They had been. `test_hooks_survive_hostile_payloads` ran hooks with
+    payloads carrying no `cwd`, so `project_dir()` fell back to the suite's
+    own working directory -- this repository -- and the hooks did exactly what
+    they are built to do: `pre_compact` appended four compaction checkpoints
+    to the real activity trail on every run, and `session_start` overwrote
+    `.git/ledger-baseline`, the Stop gate's record of what was already dirty
+    when the session began (ADR-0033). A test run therefore changed what the
+    Stop hook reported for the rest of a live session, and 270 of the 271
+    lines in the trail turned out to be test output rather than compactions.
+
+    Nothing failed, which is the point. Every hook was behaving correctly; it
+    was aimed at the wrong project. No assertion in 317 checks looked at the
+    one thing that would have shown it, so this looks at it: run the suite,
+    then compare the ledger with what it was before.
+
+    Takes the fingerprint from `main()` rather than recomputing a baseline,
+    because by the time this runs the damage would already be done.
+    """
+    print("\nFootprint on this repository")
+    after = _own_ledger_fingerprint()
+    changed = sorted(set(before) ^ set(after)) + \
+        sorted(k for k in set(before) & set(after) if before[k] != after[k])
+    check("the suite wrote nothing into this project's own ledger",
+          not changed, ", ".join(changed[:4]))
+
+
 def main():
     print("decision-ledger hook tests")
+    before = _own_ledger_fingerprint()
     for t in (test_session_start, test_briefing_without_constraints_file,
               test_silent_without_ledger, test_pre_compact,
               test_prompt_classifier, test_stop_gate,
@@ -2275,6 +2354,12 @@ def main():
         except Exception as exc:  # a crashing test is a failing test
             FAILED.append(t.__name__)
             print(f"  [FAIL] {t.__name__} raised {exc!r}")
+
+    try:  # last, and after every other test has had its chance to leak
+        test_the_suite_leaves_this_repository_alone(before)
+    except Exception as exc:
+        FAILED.append("test_the_suite_leaves_this_repository_alone")
+        print(f"  [FAIL] footprint check raised {exc!r}")
 
     print(f"\n{len(PASSED)} passed, {len(FAILED)} failed")
     if FAILED:
