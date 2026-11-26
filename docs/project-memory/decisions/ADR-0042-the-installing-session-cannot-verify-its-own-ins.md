@@ -88,6 +88,37 @@ doable in the installing session and this step becomes noise.
 
 <!-- Append-only. Empty at creation. Never edit entries above this line. -->
 
+**2026-11-26 — half of this is overstated: the skills DO appear mid-session.**
+
+Observed directly in the session that installed the plugin at project scope in
+this repository. The install ran, nothing was visible for several turns, and
+then all five skills appeared in the session's own skill list —
+`decision-ledger:cold-start`, `decision-ledger`, `ledger-adopt`,
+`ledger-backfill`, `wrap-session` — without a restart or a `/clear`. The
+harness refreshed the list on its own.
+
+So the claim as written, *"the five skills are not in the skill list, so
+invoking `decision-ledger:ledger-adopt` fails with `Unknown skill` even though
+the install is correct"*, is wrong for this harness (Claude Code 2.1.332, the
+desktop app). It may still hold for the environment where it was found; it was
+reported by a session elsewhere and not reproduced here.
+
+**What is not contradicted:** the hooks. `SessionStart` fires once, at the
+start, and a session that installs the plugin has already passed that moment —
+so the end-to-end check in `AGENT-INSTALL.md` step 6 still cannot be run by
+the installing session, and the instruction to hand it to the user stands.
+
+The practical difference matters for the troubleshooting table: an agent told
+that `Unknown skill` is expected may stop investigating a genuinely broken
+install. The table's `Unknown skill` row should say "in some harnesses" rather
+than stating it flatly, and should say that the skills may appear on their own
+after a few turns.
+
+Not changed yet: one observation, one harness, one version. Reproducing it on
+a second install before rewriting the page is the cheaper order, and
+`AGENT-INSTALL.md` is the file two real installs have already been driven
+from — it should not be edited from a single data point.
+
 ## User's own words
 
 n/a — found by an agent following the install page.

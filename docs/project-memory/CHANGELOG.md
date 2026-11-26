@@ -87,3 +87,4 @@ carries the reasoning.
 - 2026-11-26 **REJ-0009** Silence when a project has not opted in - `docs/project-memory/rejections/REJ-0009-silence-when-a-project-has-not-opted-in.md`
 - 2026-11-26 **ADR-0045** Installing into a project is the opt-in, and silence is never the answer - `docs/project-memory/decisions/ADR-0045-installing-into-a-project-is-the-opt-in-and-sile.md`
 - 2026-11-26 A project-scope install now creates the ledger itself, and a project that has not opted in is told once instead of looking broken - see ADR-0045, REJ-0009
+- 2026-11-26 ADR-0042 corrected: the skills do appear mid-session in Claude Code 2.1.332; only the hook half of it holds. Always-on cost remeasured at ~927 tokens

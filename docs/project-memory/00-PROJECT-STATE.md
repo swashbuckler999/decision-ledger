@@ -43,7 +43,11 @@ Working skeleton, not yet exercised in anger.
 - Local machine references redacted from all tracked files (ADR-0021); the
   repository's **history** still contains them
 - Installed into a throwaway project and exercised from the installed copy —
-  done; 658 tokens always-on per session (ADR-0026)
+  done; measured at 658 tokens always-on per session then (ADR-0026),
+  and at ~927 by `claude plugin details` on 2026-11-26 after the
+  ADR-0030 rewrite of all five `when_to_use` fields. Both figures are
+  estimates from the same tool at different versions; neither has been
+  checked against real usage
 - Installed into a real project — **not yet**
 - First live session with the plugin installed — **done** (ADR-0031). Hooks
   fire, SessionStart context reaches the model, all five skills are visible
